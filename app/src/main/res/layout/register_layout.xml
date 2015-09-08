@@ -1,0 +1,47 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" >
+
+    <RelativeLayout
+        android:id="@+id/edit_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true" >
+
+        <EditText
+            android:id="@+id/setName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/setNameHint"
+            android:maxLines="1" >
+        </EditText>
+
+        <EditText
+            android:id="@+id/setPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/setName"
+            android:hint="@string/setPasswordHint"
+            android:maxLines="1" >
+        </EditText>
+
+        <EditText
+            android:id="@+id/confirmPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/setPassword"
+            android:hint="@string/confirmPasswordHint"
+            android:maxLines="1" >
+        </EditText>
+
+        <Button
+            android:id="@+id/ok"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/confirmPassword"
+            android:layout_centerHorizontal="true"
+            android:text="@android:string/ok" />
+    </RelativeLayout>
+
+</RelativeLayout>
