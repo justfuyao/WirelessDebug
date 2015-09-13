@@ -10,11 +10,26 @@
         android:layout_alignParentBottom="true"
         android:text="@string/refresh" />
 
+    <Button
+        android:id="@+id/modify"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/refresh"
+        android:text="@string/modify" />
+
+    <TextView
+        android:id="@+id/self"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:gravity="center_horizontal"
+        android:text="@string/hello_world" />
+
     <ListView
         android:id="@+id/users"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_above="@id/refresh"
-        android:layout_alignParentTop="true" />
+        android:layout_below="@id/self" />
 
 </RelativeLayout>

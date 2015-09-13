@@ -1,6 +1,11 @@
 package com.tcl.wirelessdebug;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import android.app.Activity;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.Menu;
@@ -22,10 +27,6 @@ import com.tcl.config.Configuration;
 import com.tcl.inter.DispatchMessageInter;
 import com.tcl.utils.TimeUtil;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 public class TalkActivity extends Activity implements DispatchMessageInter, OnClickListener {
 
     TalkApplication mTalkApplication = null;
@@ -35,9 +36,9 @@ public class TalkActivity extends Activity implements DispatchMessageInter, OnCl
 
     private Button mSendButton = null;
     private EditText mTalkEditText = null;
-    User mOwn = null;
-    User mDestUser = null;
-    List<Msg> mTalkMsg = Collections.synchronizedList(new ArrayList<Msg>());
+    private User mOwn = null;
+    private User mDestUser = null;
+    private List<Msg> mTalkMsgs = Collections.synchronizedList(new ArrayList<Msg>());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,7 +56,7 @@ public class TalkActivity extends Activity implements DispatchMessageInter, OnCl
 
         mOwn = mTalkApplication.getUser();
         mDestUser = getIntent().getParcelableExtra("user");
-        mIpAddTextView.setText("IP:" + mDestUser.getIP() + "\nPort:" + Configuration.UDP_PORT);
+        mIpAddTextView.setText("Talk with: " + mDestUser.getUserName() + "\n" + "IP:" + mDestUser.getIP() + "\nPort:" + Configuration.UDP_PORT);
 
         mTalkApplication.addDispatchMessageInter(this);
     }
@@ -69,7 +70,7 @@ public class TalkActivity extends Activity implements DispatchMessageInter, OnCl
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
+        getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
 
@@ -89,7 +90,7 @@ public class TalkActivity extends Activity implements DispatchMessageInter, OnCl
 
         @Override
         public int getCount() {
-            return mTalkMsg.size();
+            return mTalkMsgs.size();
         }
 
         @Override
@@ -110,11 +111,19 @@ public class TalkActivity extends Activity implements DispatchMessageInter, OnCl
             } else {
                 textView = (TextView) convertView;
             }
-            textView.setText(mTalkMsg.get(position).msg);
-            if (!mTalkMsg.get(position).isOwn) {
-                textView.setGravity(Gravity.END);
+            textView.setText(mTalkMsgs.get(position).getDisplayString());
+            if (!mTalkMsgs.get(position).isOwn) {
+                if (Build.VERSION.SDK_INT >= 14) {
+                    textView.setGravity(Gravity.END);
+                } else {
+                    textView.setGravity(Gravity.RIGHT);
+                }
             } else {
-                textView.setGravity(Gravity.START);
+                if (Build.VERSION.SDK_INT >= 14) {
+                    textView.setGravity(Gravity.START);
+                } else {
+                    textView.setGravity(Gravity.LEFT);
+                }
             }
             return textView;
         }
@@ -146,13 +155,29 @@ public class TalkActivity extends Activity implements DispatchMessageInter, OnCl
 
     @Override
     public void onMSGTalk(AbstractMessage msg) {
-        onNewMsg(
-                TimeUtil.format2TimeString(System.currentTimeMillis()) + "\n" + msg.getSrcIpAdd() + "\n" + (msg.getContent() == null ? "" : new String(
-                        msg.getContent())), false);
+        onNewMsg(msg, false, Msg.SEND_STATUS_DEFAULT);
     }
 
-    private void onNewMsg(String msg, boolean isOwn) {
-        mTalkMsg.add(new Msg(msg, isOwn));
+    @Override
+    public void onMSGSendOK(AbstractMessage msg) {
+        synchronized (mTalkMsgs) {
+            for (Msg talkmsg : mTalkMsgs) {
+                if (msg.getReturnCRC8() == talkmsg.msg.getCRC8()) {
+                    talkmsg.setSendStatus(Msg.SEND_STATUS_OK);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mTalkMsgAdapter.notifyDataSetChanged();
+                        }
+                    });
+                    break;
+                }
+            }
+        }
+    }
+
+    private void onNewMsg(AbstractMessage msg, boolean isOwn, int status) {
+        mTalkMsgs.add(new Msg(msg, isOwn, status));
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -172,11 +197,12 @@ public class TalkActivity extends Activity implements DispatchMessageInter, OnCl
                 sendMsg.setPort(Configuration.UDP_PORT);
                 sendMsg.setSrcIpAdd(mOwn.getIP());
                 sendMsg.setSrcName(mOwn.getUserName());
+                sendMsg.setTime(System.currentTimeMillis());
                 String content = mTalkEditText.getText().toString();
                 mTalkEditText.setText("");
                 sendMsg.setContent(content == null ? "".getBytes() : content.getBytes());
                 mTalkApplication.sendMessage(MessageUtils.WRITE_TYPE_UDP, sendMsg);
-                onNewMsg(TimeUtil.format2TimeString(System.currentTimeMillis()) + "\n" + mOwn.getIP() + "\n" + new String(sendMsg.getContent()), true);
+                onNewMsg(sendMsg, true, Msg.SEND_STATUS_SENDING);
                 break;
 
             default:
@@ -185,12 +211,49 @@ public class TalkActivity extends Activity implements DispatchMessageInter, OnCl
     }
 
     class Msg {
-        String msg;
+
+        AbstractMessage msg;
         boolean isOwn;
 
-        public Msg(String m, boolean i) {
+        static final int SEND_STATUS_DEFAULT = -1;
+        static final int SEND_STATUS_OK = 1;
+        static final int SEND_STATUS_SENDING = 2;
+
+        // -1 no need status, 1 send ok, 2 sending
+        int sendStatus = SEND_STATUS_DEFAULT;
+
+        public void setSendStatus(int s) {
+            sendStatus = s;
+        }
+
+        public Msg(AbstractMessage m, boolean i, int status) {
             msg = m;
             isOwn = i;
+            sendStatus = status;
+        }
+
+        public String getDisplayString() {
+            String content = msg.getContent() == null ? "null" : new String(msg.getContent());
+            String ret = TimeUtil.format2TimeString(msg.getTime()) + "     " + coverStatus2String(sendStatus) + "\n" + mOwn.getIP() + "\n" + content;
+            return ret;
+        }
+
+        public String coverStatus2String(int status) {
+            String ret = "";
+            switch (status) {
+                case SEND_STATUS_DEFAULT:
+
+                    break;
+                case SEND_STATUS_SENDING:
+                    ret = "Sending...";
+                    break;
+                case SEND_STATUS_OK:
+                    ret = "Send OK";
+                    break;
+                default:
+                    break;
+            }
+            return ret;
         }
     }
 }

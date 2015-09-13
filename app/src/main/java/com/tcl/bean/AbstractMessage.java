@@ -1,9 +1,9 @@
 package com.tcl.bean;
 
-import java.nio.ByteBuffer;
-
 import com.tcl.utils.CaculateUtil;
 import com.tcl.utils.LogExt;
+
+import java.nio.ByteBuffer;
 
 public abstract class AbstractMessage {
 
@@ -114,6 +114,14 @@ public abstract class AbstractMessage {
         return this;
     }
 
+    public void setTime(long t) {
+        mTime = t;
+    }
+
+    public long getTime() {
+        return mTime;
+    }
+
     // receive buffer base
     // #length-4###CRC8-4####IP_S-32###IP_D-32####type-1####time-8##
     // |_________|_________|_________|__________|_________|_________|
@@ -164,7 +172,6 @@ public abstract class AbstractMessage {
         mByteBuffer.position(MessageUtils.TYPE_BYTE_OFFSET);
         mByteBuffer.put(CaculateUtil.bigIntToByte(mType, MessageUtils.TYPE_BYTE_SIZE));
         mByteBuffer.position(MessageUtils.TIME_BYTE_OFFSET);
-        mTime = System.currentTimeMillis();
         mByteBuffer.put(CaculateUtil.long2Byte(mTime));
         mByteBuffer.position(MessageUtils.LENGTH_BYTE_OFFSET);
         byte[] temps = new byte[mLength];
@@ -189,11 +196,24 @@ public abstract class AbstractMessage {
     // we need write length buffer and those buffer after time block
     protected abstract int continueProductMsg();
 
+    //TODO: maybe need do other params compare
+    public int compare(AbstractMessage msg) {
+        if (null == msg) {
+            return -1;
+        } else if (mCRC8 != msg.mCRC8) {
+            return -2;
+        } else if (mReturnCrc8 != msg.mReturnCrc8) {
+            return -3;
+        }
+
+        return 1;
+    }
+
     @Override
     public String toString() {
         return "Length:" + mLength + " SrcIp:" + mSrcIpAdd + " SrcName:" + mSrcName + " DstIp:" + mDstIpAdd + "" + " DstName:" + mDstName + " port:" + mPort
                 + " type:" + MessageUtils.coverType2String(mType) + " CRC8:" + mCRC8 + " returnCRC8:" + mReturnCrc8 + " ResentTime:" + mResendTime
-                + " content:" + String.valueOf(mContent);
+                + " content:" + (mContent == null ? "null" : new String(mContent));
     }
 
 }

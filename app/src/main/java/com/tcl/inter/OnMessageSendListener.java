@@ -4,5 +4,6 @@ import com.tcl.bean.AbstractMessage;
 
 
 public interface OnMessageSendListener {
-    void onMsgSend(AbstractMessage msg);
+    void onMsgSendOK(AbstractMessage msg);
+    void onMsgSendError(AbstractMessage msg);
 }

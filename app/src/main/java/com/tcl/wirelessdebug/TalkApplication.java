@@ -1,13 +1,5 @@
 package com.tcl.wirelessdebug;
 
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import android.app.Application;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -30,6 +22,14 @@ import com.tcl.talkclient.NIOUDPSocketClient;
 import com.tcl.utils.IPv4v6Utils;
 import com.tcl.utils.LogExt;
 
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 public class TalkApplication extends Application implements HandleMessageInter, OnMessageSendListener {
     private static final String TAG = "fuyao-TalkApplication";
 
@@ -37,7 +37,7 @@ public class TalkApplication extends Application implements HandleMessageInter, 
 
     private Map<String, AbstractMessage> mOutUDPMessages = Collections.synchronizedMap(new HashMap<String, AbstractMessage>());
 
-    private Map<String, AbstractMessage> mReceiveUDPMessages = Collections.synchronizedMap(new HashMap<String, AbstractMessage>());
+    private Map<Long, AbstractMessage> mReceiveUDPMessages = Collections.synchronizedMap(new HashMap<Long, AbstractMessage>());
 
     private NIOUDPSocketClient mUDPClient = null;
 
@@ -57,6 +57,7 @@ public class TalkApplication extends Application implements HandleMessageInter, 
                             LogExt.d(TAG, "~~~~~~~~~~~~~~~ resend time is " + udp.getResendTime() + " msg is " + udp);
                             udp.addResendTime();
                             notifyClientSend(udp);
+                            udp.addResendTime();
                         } else {
                             stopSendMsgTimeout(udp);
                         }
@@ -183,7 +184,9 @@ public class TalkApplication extends Application implements HandleMessageInter, 
     @Override
     public void onCreate() {
         super.onCreate();
-        mTalkApplication = this;
+        if (null == mTalkApplication) {
+            mTalkApplication = this;
+        }
         mUser = restoreUser();
     }
 
@@ -196,7 +199,7 @@ public class TalkApplication extends Application implements HandleMessageInter, 
     }
 
     private void stopSendMsgTimeout(AbstractMessage msg) {
-        AbstractMessage tempMsg = mOutUDPMessages.remove(String.valueOf(msg.getCRC8()));
+        AbstractMessage tempMsg = mOutUDPMessages.remove(String.valueOf(msg.getReturnCRC8()));
         if (null != tempMsg) {
             LogExt.d(TAG, "~~~~~~~~~~~~~~~~~~stopSendMsgTimeout " + tempMsg);
             mHandler.removeMessages(MSG_TIME_OUT, tempMsg);
@@ -208,6 +211,41 @@ public class TalkApplication extends Application implements HandleMessageInter, 
         notifyClientSend(msg);
     }
 
+    // if this msg is return msg, we will stop the send msg's time out.
+    // if this msg is normal msg, we will return a msg back tell other we
+    // received the msg
+    // if this msg we already received, func will return 1
+    // if is new msg,func will return 0
+    private int doPreDispatch(AbstractMessage msg) {
+        int msgType = msg.getType();
+        // received return MSG,so stop time out do send it again
+        if (msgType > MessageUtils.TYPE_RETURN_BASE && msgType < MessageUtils.TYPE_RETURN_END) {
+            stopSendMsgTimeout(msg);
+            LogExt.d(TAG, "handleMSGRead received return msg: " + msg);
+        } else {
+            // we already received this MSG, we direct send return MSG
+            AbstractMessage sendMsg = new SendUDPMessage();
+            sendMsg.setDstIpAdd(msg.getSrcIpAdd());
+            sendMsg.setSrcIpAdd(mUser.getIP());
+            sendMsg.setSrcName(mUser.getUserName());
+            sendMsg.setType(MessageUtils.coverType2ReturnType(msgType));
+            sendMsg.setReturnCRC8(msg.getCRC8());
+            sendMsg.setTime(System.currentTimeMillis());
+            sendMsg.setPort(Configuration.UDP_PORT);
+            sendReturnMsg(sendMsg);
+        }
+
+        AbstractMessage tempMsg = mReceiveUDPMessages.get(msg.getTime());
+        if (msg.compare(tempMsg) > 0) {
+            LogExt.d(TAG, "handleMSGRead received duplicate msg: " + msg);
+            return 0;
+        }
+
+        mReceiveUDPMessages.put(msg.getTime(), msg);
+        LogExt.d(TAG, "handleMSGRead received new msg: " + msg);
+        return 1;
+    }
+
     @Override
     public int handleMSGRead(ByteBuffer buffer, InetSocketAddress socketAddress) {
         AbstractMessage msg = new ReceiveUDPMessage();
@@ -216,71 +254,56 @@ public class TalkApplication extends Application implements HandleMessageInter, 
         LogExt.d(TAG, "handleMSGRead " + msg);
         if (MessageUtils.PARSE_RESULT_DATA_OK == result) {
             int msgType = msg.getType();
-            // received return MSG,so stop time out do send it again
-            if (msgType > MessageUtils.TYPE_RETURN_BASE && msgType < MessageUtils.TYPE_RETURN_END) {
-                stopSendMsgTimeout(msg);
-            } else {
-                // we already received this MSG, we direct send return MSG
-                AbstractMessage sendMsg = new SendUDPMessage();
-                sendMsg.setDstIpAdd(msg.getSrcIpAdd());
-                sendMsg.setSrcIpAdd(mUser.getIP());
-                sendMsg.setSrcName(mUser.getUserName());
-                sendMsg.setType(MessageUtils.coverType2ReturnType(msgType));
-                sendMsg.setReturnCRC8(msg.getCRC8());
-                sendMsg.setPort(msg.getPort());
-                sendReturnMsg(sendMsg);
-            }
+            if (doPreDispatch(msg) > 0) {
+                int size = mDispatchMessageInters.size();
+                if (size > 0) {
+                    switch (msgType) {
+                        case MessageUtils.TYPE_SAY_HELLO:
+                        case MessageUtils.TYPE_RETURN_SAY_HELLO:
+                            for (int i = 0; i < size; i++) {
+                                mDispatchMessageInters.get(i).onMSGOnline(msg);
+                            }
+                            break;
+                        case MessageUtils.TYPE_TALK_MSG:
+                            for (int i = 0; i < size; i++) {
+                                mDispatchMessageInters.get(i).onMSGTalk(msg);
+                            }
+                            break;
+                        case MessageUtils.TYPE_RETURN_TALK_MSG:
+                            for (int i = 0; i < size; i++) {
+                                mDispatchMessageInters.get(i).onMSGSendOK(msg);
+                            }
+                            break;
 
-            if (mReceiveUDPMessages.containsKey(String.valueOf(msg.getCRC8()))) {
-                LogExt.d(TAG, "handleMSGRead already received " + msg);
-                return result;
-            } else {
-                mReceiveUDPMessages.put(String.valueOf(msg.getCRC8()), msg);
-            }
-
-            int size = mDispatchMessageInters.size();
-            if (size > 0) {
-                switch (msgType) {
-                    case MessageUtils.TYPE_SAY_HELLO:
-                    case MessageUtils.TYPE_RETURN_SAY_HELLO:
-                        for (int i = 0; i < size; i++) {
-                            mDispatchMessageInters.get(i).onMSGOnline(msg);
-                        }
-                        break;
-                    case MessageUtils.TYPE_TALK_MSG:
-                        for (int i = 0; i < size; i++) {
-                            mDispatchMessageInters.get(i).onMSGTalk(msg);
-                        }
-                        break;
-                    default:
-                        break;
+                        default:
+                            break;
+                    }
                 }
             }
         }
         return result;
     }
 
+    @Deprecated
     @Override
     public ByteBuffer handleMSGWrite(String destAdd, int port) {
         AbstractMessage msg = null;
         LogExt.d(TAG, "handleUDPMSGWrite destAdd = " + destAdd + " port = " + port);
-        // if ((msg = mOutUDPMsgs.poll()) != null) {
-        // LogExt.d(TAG, "handleUDPMSGWrite msg address " + msg.getDestIpAdd() +
-        // " msg port is " + msg.getPort());
-        // if (msg.getDestIpAdd().equals(destAdd) && (msg.getPort() == port)) {
-        // LogExt.d(TAG, "handleUDPMSGWrite return bytebuffer");
-        // return msg.getByteBuffer();
-        // }
-        // }
         LogExt.d(TAG, "handleUDPMSGWrite return null");
         return null;
     }
 
     @Override
-    public void onMsgSend(AbstractMessage msg) {
-        if (msg.getType() < MessageUtils.TYPE_BASE_END && msg.getType() > MessageUtils.TYPE_BASE) {
+    public void onMsgSendOK(AbstractMessage msg) {
+        if (MessageUtils.TYPE_BASE < msg.getType() && msg.getType() < MessageUtils.TYPE_BASE_END) {
             startSendMsgTimeout(msg);
         }
+    }
+
+    @Override
+    public void onMsgSendError(AbstractMessage msg) {
+        // TODO Auto-generated method stub
+
     }
 
 }

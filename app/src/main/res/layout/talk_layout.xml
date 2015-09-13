@@ -8,7 +8,8 @@
         android:id="@+id/ip_add"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/hello_world" />
+        android:text="@string/hello_world"
+        android:gravity="center_horizontal" />
 
     <ListView
         android:id="@+id/talk_info"

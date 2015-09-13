@@ -31,6 +31,8 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
 
     private ListView mUsersListView = null;
     private Button mRefreshButton = null;
+    private Button mModifyButton = null;
+    private TextView mSelfTextView = null;
 
     List<User> mTalkUsers = Collections.synchronizedList(new ArrayList<User>());
     UserAdapter mUserAdapter = null;
@@ -44,9 +46,17 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
         mRefreshButton = (Button) findViewById(R.id.refresh);
         mRefreshButton.setOnClickListener(this);
 
+        mModifyButton = (Button) findViewById(R.id.modify);
+        mModifyButton.setOnClickListener(this);
+
+        mSelfTextView = (TextView) findViewById(R.id.self);
+
         mTalkApplication = TalkApplication.getTalkApplication();
         mTalkApplication.addDispatchMessageInter(this);
         final User user = mTalkApplication.getUser();
+        String selfText = "I'm " + user.getUserName() + "\n" + user.getIP() + "\n";
+        mSelfTextView.setText(selfText);
+
         mUsersListView = (ListView) findViewById(R.id.users);
         mUserAdapter = new UserAdapter();
         mUsersListView.setAdapter(mUserAdapter);
@@ -109,8 +119,12 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
             } else {
                 textView = (TextView) convertView;
             }
-            textView.setText(mTalkUsers.get(position).getUserName() + "\n" + User.coverStatus2String(mTalkUsers.get(position).getStatus()) + "\n"
-                    + mTalkUsers.get(position).getIP());
+            User user = mTalkUsers.get(position);
+            int num = user.getMsgNum();
+            String numString = num > 10 ? "99+" : String.valueOf(num);
+            String msgString = user.getMsgNum() > 0 ? (numString + " New Message") : "";
+            String diString = user.getUserName() + "\n" + User.coverStatus2String(user.getStatus()) + "\n" + user.getIP() + "      " + msgString;
+            textView.setText(diString);
             return textView;
         }
     }
@@ -131,21 +145,19 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
     public void onMSGOnline(AbstractMessage msg) {
         User tUser = new User(msg.getSrcName(), msg.getSrcIpAdd(), User.STATUS_ONLINE);
         LogExt.d(TAG, "onMSGOnline msg " + msg);
+
         if (!msg.getSrcIpAdd().equals(mTalkApplication.getUser().getIP())) {
             boolean has = false;
-            for (User tempUser : mTalkUsers) {
-                LogExt.d(TAG, "onMSGOnline tempUser ip:" + tempUser.getIP());
-                if (tempUser.getIP().equals(msg.getSrcIpAdd())) {
-                    if (tempUser.getIsOwn()) {
-                        return;
+            synchronized (mTalkUsers) {
+                for (User tempUser : mTalkUsers) {
+                    LogExt.d(TAG, "onMSGOnline tempUser ip:" + tempUser.getIP());
+                    if (tempUser.getIP().equals(msg.getSrcIpAdd())) {
+                        tempUser.setUserName(msg.getSrcName());
+                        has = true;
+                        break;
                     }
-                    mTalkUsers.remove(tempUser);
-                    mTalkUsers.add(tUser);
-                    has = true;
-                    break;
                 }
             }
-
             if (!has) {
                 mTalkUsers.add(tUser);
             }
@@ -167,8 +179,24 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
 
     @Override
     public void onMSGTalk(AbstractMessage msg) {
-        // TODO Auto-generated method stub
+        if (!msg.getSrcIpAdd().equals(mTalkApplication.getUser().getIP())) {
+            synchronized (mTalkUsers) {
+                for (User tempUser : mTalkUsers) {
+                    LogExt.d(TAG, "onMSGOnline tempUser ip:" + tempUser.getIP());
+                    if (tempUser.getIP().equals(msg.getSrcIpAdd())) {
+                        tempUser.setMsgNum(tempUser.getMsgNum() + 1);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                mUserAdapter.notifyDataSetChanged();
+                            }
+                        });
+                        break;
+                    }
+                }
+            }
 
+        }
     }
 
     @Override
@@ -177,7 +205,9 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
             case R.id.refresh:
                 mTalkApplication.sendMessage(MessageUtils.WRITE_TYPE_UDP, mSendMsg);
                 break;
+            case R.id.modify:
 
+                break;
             default:
                 break;
         }
@@ -187,8 +217,16 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         User talkUser = mTalkUsers.get(position);
         Intent intent = new Intent();
+        talkUser.setMsgNum(0);
+        mUserAdapter.notifyDataSetChanged();
         intent.putExtra("user", talkUser);
         intent.setClass(this, TalkActivity.class);
         startActivity(intent);
+    }
+
+    @Override
+    public void onMSGSendOK(AbstractMessage msg) {
+        // TODO Auto-generated method stub
+        
     }
 }

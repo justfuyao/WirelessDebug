@@ -24,10 +24,30 @@ public class ReceiveUDPMessage extends AbstractMessage {
     protected int continueParse(byte[] msgs, int length) {
         int ret = MessageUtils.PARSE_RESULT_DATA_OK;
         switch (mType) {
+        // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,crc8
             case MessageUtils.TYPE_RETURN_TALK_MSG:
-            case MessageUtils.TYPE_RETURN_SAY_HELLO:
-                if ((length - MessageUtils.TIME_BYTE_OFFSET) == MessageUtils.TIME_BYTE_SIZE) {
+                if ((length - MessageUtils.BASE_TOTAL_BYTE_OFFSET) >= MessageUtils.CRC8_BYTE_SIZE) {
                     mReturnCrc8 = CaculateUtil.bigBytesToInt(msgs, MessageUtils.BASE_TOTAL_BYTE_OFFSET);
+                }
+                break;
+
+            // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,name-length
+            case MessageUtils.TYPE_SAY_HELLO:
+                if ((length - MessageUtils.BASE_TOTAL_BYTE_OFFSET) > 0) {
+                    if ((length - MessageUtils.BASE_TOTAL_BYTE_OFFSET) > 0) {
+                        mSrcName = new String(msgs, MessageUtils.BASE_TOTAL_BYTE_OFFSET, length - MessageUtils.BASE_TOTAL_BYTE_OFFSET);
+                    }
+                }
+                break;
+
+            // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,crc8,name
+            case MessageUtils.TYPE_RETURN_SAY_HELLO:
+                if ((length - MessageUtils.BASE_TOTAL_BYTE_OFFSET) >= MessageUtils.CRC8_BYTE_SIZE) {
+                    mReturnCrc8 = CaculateUtil.bigBytesToInt(msgs, MessageUtils.BASE_TOTAL_BYTE_OFFSET);
+                    if ((length - MessageUtils.BASE_TOTAL_BYTE_OFFSET - MessageUtils.CRC8_BYTE_SIZE) > 0) {
+                        mSrcName = new String(msgs, MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.CRC8_BYTE_SIZE, length
+                                - MessageUtils.BASE_TOTAL_BYTE_OFFSET - MessageUtils.CRC8_BYTE_SIZE);
+                    }
                 }
                 break;
 

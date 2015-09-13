@@ -40,24 +40,34 @@ public class SendUDPMessage extends AbstractMessage {
     protected int continueProductMsg() {
         switch (mType) {
             case MessageUtils.TYPE_SAY_HELLO:
-                // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8
-                mLength = MessageUtils.BASE_TOTAL_BYTE_OFFSET;
+                // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,name-length
+                mLength = MessageUtils.BASE_TOTAL_BYTE_OFFSET + mSrcName.getBytes().length;
                 mByteBuffer = ByteBuffer.allocate(mLength);
+                mByteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET);
+                mByteBuffer.put(mSrcName.getBytes());
                 break;
             case MessageUtils.TYPE_TALK_MSG:
-                // length-4,crc8-4,ipS-32,ipD-32,type-1,content-length
+                // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,content-length
                 mLength = MessageUtils.BASE_TOTAL_BYTE_OFFSET + mContent.length;
                 mByteBuffer = ByteBuffer.allocate(mLength);
                 mByteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET);
                 mByteBuffer.put(mContent);
                 break;
             case MessageUtils.TYPE_RETURN_SAY_HELLO:
+                // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,crc8,name
+                mLength = MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.CRC8_BYTE_SIZE + mSrcName.getBytes().length;
+                mByteBuffer = ByteBuffer.allocate(mLength);
+                mByteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET);
+                mByteBuffer.put(CaculateUtil.bigIntToByte(mReturnCrc8, MessageUtils.CRC8_BYTE_SIZE));
+                mByteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.CRC8_BYTE_SIZE);
+                mByteBuffer.put(mSrcName.getBytes());
+                break;
             case MessageUtils.TYPE_RETURN_TALK_MSG:
-                // length-4,crc8-4,ipS-32,ipD-32,type-1,crc8
+                // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,crc8
                 mLength = MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.CRC8_BYTE_SIZE;
                 mByteBuffer = ByteBuffer.allocate(mLength);
                 mByteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET);
-                mByteBuffer.put(CaculateUtil.bigIntToByte(mCRC8, MessageUtils.CRC8_BYTE_SIZE));
+                mByteBuffer.put(CaculateUtil.bigIntToByte(mReturnCrc8, MessageUtils.CRC8_BYTE_SIZE));
                 break;
             default:
                 throw new IllegalArgumentException("prepareProductMsg not support type " + MessageUtils.coverType2String(mType));

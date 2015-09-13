@@ -95,9 +95,12 @@ public class NIOUDPSocketClient {
                                         + LogExt.bytesToHexString(msg.getByteBuffer().array()));
                         mDatagramChannel.send(msg.getByteBuffer(), new InetSocketAddress(InetAddress.getByName(msg.getDstIpAdd()), msg.getPort()));
                         if (null != mOnMessageSendListener) {
-                            mOnMessageSendListener.onMsgSend(msg);
+                            mOnMessageSendListener.onMsgSendOK(msg);
                         }
                     } catch (IOException e) {
+                        if (null != mOnMessageSendListener) {
+                            mOnMessageSendListener.onMsgSendError(msg);
+                        }
                         LogExt.e(TAG, "IOException", e);
                     }
                 }

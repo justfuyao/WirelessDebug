@@ -12,6 +12,8 @@ public class User implements Parcelable {
     private String mUserName = "Default Name";
     private String mPassword = "123456";
 
+    private int mMsgNum = 0;
+
     private String mIp = "";
     private int mStatus = STATUS_ONLINE;
 
@@ -36,6 +38,7 @@ public class User implements Parcelable {
         mIp = u.getIP();
         mStatus = u.getStatus();
         mIsOwn = u.getIsOwn();
+        mMsgNum = u.getMsgNum();
     }
 
     public User(String name, String ip, int status) {
@@ -57,6 +60,15 @@ public class User implements Parcelable {
         mIp = parcel.readString();
         mStatus = parcel.readInt();
         mIsOwn = parcel.readInt() == 1;
+        mMsgNum = parcel.readInt();
+    }
+
+    public int getMsgNum() {
+        return mMsgNum;
+    }
+
+    public void setMsgNum(int n) {
+        mMsgNum = n;
     }
 
     public boolean getIsOwn() {
@@ -65,6 +77,10 @@ public class User implements Parcelable {
 
     public int getStatus() {
         return mStatus;
+    }
+
+    public void setUserName(String n) {
+        mUserName = n;
     }
 
     public String getUserName() {
@@ -79,7 +95,7 @@ public class User implements Parcelable {
         return mIp;
     }
 
-    public final static Creator<User> CREATOR = new Creator<User>() {
+    public final static Parcelable.Creator<User> CREATOR = new Parcelable.Creator<User>() {
 
         @Override
         public User createFromParcel(Parcel parcel) {
@@ -105,5 +121,6 @@ public class User implements Parcelable {
         dest.writeString(mIp);
         dest.writeInt(mStatus);
         dest.writeInt(mIsOwn == true ? 1 : 0);
+        dest.writeInt(mMsgNum);
     }
 }

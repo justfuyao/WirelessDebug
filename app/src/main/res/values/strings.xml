@@ -10,5 +10,6 @@
     <string name="confirmPasswordHint">Confirm Password</string>
     <string name="send">Send</string>
     <string name="refresh">Refresh</string>
+    <string name="modify">Modify</string>
 
 </resources>
