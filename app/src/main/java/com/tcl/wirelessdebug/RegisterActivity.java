@@ -1,8 +1,5 @@
 package com.tcl.wirelessdebug;
 
-import com.tcl.bean.User;
-import com.tcl.utils.IPv4v6Utils;
-
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
@@ -12,6 +9,9 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import com.tcl.database.User;
+import com.tcl.utils.IPv4v6Utils;
 
 public class RegisterActivity extends Activity implements OnClickListener {
     private EditText mSetName = null;
@@ -68,7 +68,8 @@ public class RegisterActivity extends Activity implements OnClickListener {
                 } else if (!cPassword.equals(password)) {
                     Toast.makeText(this, "Passwords are not same", Toast.LENGTH_SHORT).show();
                 } else {
-                    TalkApplication.getTalkApplication().setUser(new User(name, password, IPv4v6Utils.getLocalIPAddress(), true));
+                    String uid = String.valueOf(System.currentTimeMillis());// UUID.randomUUID().toString();
+                    TalkApplication.getTalkApplication().setUser(new User(null, name, IPv4v6Utils.getLocalIPAddress(), uid, User.USER_STATUS_ONLINE, 0));
                     startActivity(new Intent(getApplicationContext(), UsersActivity.class));
                     finish();
                 }

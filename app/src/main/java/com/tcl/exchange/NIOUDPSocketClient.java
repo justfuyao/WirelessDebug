@@ -1,7 +1,7 @@
-package com.tcl.talkclient;
+package com.tcl.exchange;
 
-import com.tcl.bean.AbstractMessage;
 import com.tcl.config.Configuration;
+import com.tcl.database.Msg;
 import com.tcl.inter.HandleMessageInter;
 import com.tcl.inter.OnMessageSendListener;
 import com.tcl.utils.LogExt;
@@ -16,12 +16,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class NIOUDPSocketClient {
     private static final String TAG = "fuyao-NIOUDPSocketClient";
 
-    private ConcurrentLinkedQueue<AbstractMessage> mOutUDPMsgs = new ConcurrentLinkedQueue<AbstractMessage>();
+    private ConcurrentLinkedQueue<Msg> mOutUDPMsgs = new ConcurrentLinkedQueue<Msg>();
 
     private DatagramChannel mDatagramChannel;
     private ByteBuffer mReadByteBuffer = ByteBuffer.allocate(Configuration.UDP_BUFFER_SIZE);
     private Thread mSendThread = null;
-    private Object mSendLock = new Object();
+    private final Object mSendLock = new Object();
     private Thread mReceiveThread = null;
 
     private boolean mStop = false;
@@ -74,26 +74,25 @@ public class NIOUDPSocketClient {
 
     }
 
-    public void sendMsg(AbstractMessage msg) {
+    public void sendMsg(Msg msg) {
         mOutUDPMsgs.add(msg);
         synchronized (mSendLock) {
             mSendLock.notify();
         }
-
     }
 
     Runnable mSendRunnable = new Runnable() {
         @Override
         public void run() {
             while (true) {
-                AbstractMessage msg;
+                Msg msg;
                 while ((msg = mOutUDPMsgs.poll()) != null && !mStop) {
                     try {
                         LogExt.d(
                                 TAG,
-                                "send to " + msg.getDstIpAdd() + "  " + msg.getPort() + " " + msg.getByteBuffer().toString() + " neirong shi "
+                                "send to " + msg.getDstAddress() + "  " + msg.getPort() + " " + msg.getByteBuffer().toString() + " neirong shi "
                                         + LogExt.bytesToHexString(msg.getByteBuffer().array()));
-                        mDatagramChannel.send(msg.getByteBuffer(), new InetSocketAddress(InetAddress.getByName(msg.getDstIpAdd()), msg.getPort()));
+                        mDatagramChannel.send(msg.getByteBuffer(), new InetSocketAddress(InetAddress.getByName(msg.getDstAddress()), msg.getPort()));
                         if (null != mOnMessageSendListener) {
                             mOnMessageSendListener.onMsgSendOK(msg);
                         }

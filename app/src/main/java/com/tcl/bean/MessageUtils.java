@@ -1,18 +1,36 @@
 package com.tcl.bean;
 
+import com.tcl.database.Msg;
+import com.tcl.database.User;
+import com.tcl.utils.CaculateUtil;
+import com.tcl.utils.LogExt;
+
+import java.nio.ByteBuffer;
+
 public class MessageUtils {
+    private static final String TAG = "fuyao-MessageUtils";
+
+    // receive buffer base
+    // #length-4###CRC8-4####IP_S-32###UID_S-8####IP_D-32####UID_D-8####type-1####time-8##
+    // |_________|_________|_________|_________|__________|__________|_________|_________|
     public static final int LENGTH_BYTE_SIZE = 4;
     public static final int CRC8_BYTE_SIZE = 4;
     public static final int IP_SCR_BYTE_SIZE = 32;
+    // TODO:now use time instead caculate uid
+    public static final int UID_SRC_BYTE_SIZE = 8;
     public static final int IP_DST_BYTE_SIZE = IP_SCR_BYTE_SIZE;
+    // TODO:now use time instead caculate uid
+    public static final int UID_DST_BYTE_SIZE = UID_SRC_BYTE_SIZE;
     public static final int TYPE_BYTE_SIZE = 1;
     public static final int TIME_BYTE_SIZE = 8;
 
     public static final int LENGTH_BYTE_OFFSET = 0;
     public static final int CRC8_BYTE_OFFSET = LENGTH_BYTE_SIZE;
     public static final int IP_SRC_BYTE_OFFSET = CRC8_BYTE_OFFSET + CRC8_BYTE_SIZE;
-    public static final int IP_DST_BYTE_OFFSET = IP_SRC_BYTE_OFFSET + IP_SCR_BYTE_SIZE;
-    public static final int TYPE_BYTE_OFFSET = IP_DST_BYTE_OFFSET + IP_DST_BYTE_SIZE;
+    public static final int UID_SRC_BYTE_OFFSET = IP_SRC_BYTE_OFFSET + IP_SCR_BYTE_SIZE;
+    public static final int IP_DST_BYTE_OFFSET = UID_SRC_BYTE_OFFSET + UID_SRC_BYTE_SIZE;
+    public static final int UID_DST_BYTE_OFFSET = IP_DST_BYTE_OFFSET + IP_DST_BYTE_SIZE;
+    public static final int TYPE_BYTE_OFFSET = UID_DST_BYTE_OFFSET + UID_DST_BYTE_SIZE;
     public static final int TIME_BYTE_OFFSET = TYPE_BYTE_OFFSET + TYPE_BYTE_SIZE;
     public static final int BASE_TOTAL_BYTE_OFFSET = TIME_BYTE_OFFSET + TIME_BYTE_SIZE;
 

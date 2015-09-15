@@ -14,29 +14,30 @@ public class DatabaseGenerator {
         Schema schema = new Schema(VERSION_NUM, "com.tcl.database");
         schema.enableKeepSectionsByDefault();
         schema.enableActiveEntitiesByDefault();
-        addUsers(schema);
-        addMsgs(schema);
-
+        addUsersAndMsgs(schema);
+        //addCustomerOrder(schema);
         new DaoGenerator().generateAll(schema, "./app/src/main/java");
     }
 
-    private static void addUsers(Schema schema) {
+    private static void addUsersAndMsgs(Schema schema) {
         Entity user = schema.addEntity("User");
         user.addIdProperty().autoincrement();
-        user.addStringProperty("name");
-        user.addStringProperty("ip_address");
-        user.addStringProperty("uid");
-    }
+        user.addStringProperty("_Name");
+        user.addStringProperty("_IpAddress");
+        user.addStringProperty("_UID").notNull().primaryKey();
 
-    private static void addMsgs(Schema schema) {
-        Entity msg = schema.addEntity("Msgs");
+
+        Entity msg = schema.addEntity("Msg");
         msg.addIdProperty().autoincrement();
-        msg.addIntProperty("user_src_id").notNull();
-        msg.addIntProperty("user_dst_id").notNull();
-        msg.addDateProperty("data").notNull();
-        msg.addStringProperty("content");
-        msg.addIntProperty("type");
-        msg.addByteArrayProperty("bytes");
+        msg.addStringProperty("_UserUID").notNull();
+        msg.addLongProperty("_Timestamps").notNull();
+        msg.addIntProperty("_Type").notNull();
+        msg.addIntProperty("_SendType");
+        msg.addIntProperty("_CRC8");
+        msg.addByteArrayProperty("_Bytes").primaryKey();
+        msg.addIntProperty("_Length");
+        msg.addIntProperty("_SendTime");
+
     }
 
     private static void addNote(Schema schema) {

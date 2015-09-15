@@ -102,14 +102,10 @@ public class CaculateUtil {
             throw new IllegalArgumentException();
         }
         int addr = 0;
-        if (bytes.length == 1) {
-            addr = bytes[0] & 0xFF;
-        } else {
-            addr = bytes[0] & 0xFF;
-            addr = (addr << 8) | (bytes[1] & 0xff);
-            addr = (addr << 8) | (bytes[2] & 0xff);
-            addr = (addr << 8) | (bytes[3] & 0xff);
-        }
+        addr = bytes[0] & 0xFF;
+        addr = (addr << 8) | (bytes[1] & 0xff);
+        addr = (addr << 8) | (bytes[2] & 0xff);
+        addr = (addr << 8) | (bytes[3] & 0xff);
         return addr;
     }
 

@@ -19,11 +19,9 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.tcl.bean.AbstractMessage;
 import com.tcl.bean.MessageUtils;
-import com.tcl.bean.SendUDPMessage;
-import com.tcl.bean.User;
 import com.tcl.config.Configuration;
+import com.tcl.database.User;
 import com.tcl.inter.DispatchMessageInter;
 import com.tcl.utils.TimeUtil;
 
@@ -56,7 +54,7 @@ public class TalkActivity extends Activity implements DispatchMessageInter, OnCl
 
         mOwn = mTalkApplication.getUser();
         mDestUser = getIntent().getParcelableExtra("user");
-        mIpAddTextView.setText("Talk with: " + mDestUser.getUserName() + "\n" + "IP:" + mDestUser.getIP() + "\nPort:" + Configuration.UDP_PORT);
+        mIpAddTextView.setText("Talk with: " + mDestUser.get_Name() + "\n" + "IP:" + mDestUser.get_IpAddress() + "\nPort:" + Configuration.UDP_PORT);
 
         mTalkApplication.addDispatchMessageInter(this);
     }
@@ -130,25 +128,7 @@ public class TalkActivity extends Activity implements DispatchMessageInter, OnCl
     }
 
     @Override
-    public void onMSGLogin(AbstractMessage msg) {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void onMSGRegister(AbstractMessage msg) {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void onMSGOnline(AbstractMessage msg) {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void onMSGOffline(AbstractMessage msg) {
+    public void onNewMsg(User user, com.tcl.database.Msg msg) {
         // TODO Auto-generated method stub
 
     }
@@ -193,10 +173,10 @@ public class TalkActivity extends Activity implements DispatchMessageInter, OnCl
             case R.id.send:
                 AbstractMessage sendMsg = new SendUDPMessage();
                 sendMsg.setType(MessageUtils.TYPE_TALK_MSG);
-                sendMsg.setDstIpAdd(mDestUser.getIP());
+                sendMsg.setDstIpAdd(mDestUser.get_IpAddress());
                 sendMsg.setPort(Configuration.UDP_PORT);
-                sendMsg.setSrcIpAdd(mOwn.getIP());
-                sendMsg.setSrcName(mOwn.getUserName());
+                sendMsg.setSrcIpAdd(mOwn.get_IpAddress());
+                sendMsg.setSrcName(mOwn.get_Name());
                 sendMsg.setTime(System.currentTimeMillis());
                 String content = mTalkEditText.getText().toString();
                 mTalkEditText.setText("");
@@ -234,7 +214,7 @@ public class TalkActivity extends Activity implements DispatchMessageInter, OnCl
 
         public String getDisplayString() {
             String content = msg.getContent() == null ? "null" : new String(msg.getContent());
-            String ret = TimeUtil.format2TimeString(msg.getTime()) + "     " + coverStatus2String(sendStatus) + "\n" + mOwn.getIP() + "\n" + content;
+            String ret = TimeUtil.format2TimeString(msg.getTime()) + "     " + coverStatus2String(sendStatus) + "\n" + mOwn.get_IpAddress() + "\n" + content;
             return ret;
         }
 
@@ -256,4 +236,5 @@ public class TalkActivity extends Activity implements DispatchMessageInter, OnCl
             return ret;
         }
     }
+
 }

@@ -25,7 +25,6 @@ public class TimeUtil {
         } catch (ParseException e) {
             e.printStackTrace();
         }
-        // 继续转换得到秒数的long型
         ret = dt2 == null ? 0 : dt2.getTime();
         return ret;
     }

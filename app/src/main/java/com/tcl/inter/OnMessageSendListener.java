@@ -1,9 +1,9 @@
 package com.tcl.inter;
 
-import com.tcl.bean.AbstractMessage;
 
+import com.tcl.database.Msg;
 
 public interface OnMessageSendListener {
-    void onMsgSendOK(AbstractMessage msg);
-    void onMsgSendError(AbstractMessage msg);
+    void onMsgSendOK(Msg msg);
+    void onMsgSendError(Msg msg);
 }

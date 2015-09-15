@@ -1,4 +1,4 @@
-package com.tcl.talkclient;
+package com.tcl.exchange;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -18,7 +18,6 @@ import android.util.Log;
 public class NIOTCPSocketClient implements Runnable {
     private static final String TAG = "fuyao-NIOSocketClient";
 
-    // 空闲计数器,如果空闲超过10次,将检测server是否中断连接.
     private static int idleCounter = 0;
     private Selector selector;
     private SocketChannel socketChannel;
@@ -37,13 +36,11 @@ public class NIOTCPSocketClient implements Runnable {
         // 连接远程server
         socketChannel = SocketChannel.open();
         socketChannel.configureBlocking(false);
-        // 如果快速的建立了连接,返回true.如果没有建立,则返回false,并在连接后出发Connect事件.
         Boolean isConnected = socketChannel.connect(new InetSocketAddress("166.166.166.219", 9797));
         Log.d(TAG, "NIOSocketClient construct " + isConnected);
         if (isConnected) {
             socketChannel.register(selector, SelectionKey.OP_WRITE);
         } else {
-            // 如果连接还在尝试中,则注册connect事件的监听. connect成功以后会出发connect事件.
             socketChannel.register(selector, SelectionKey.OP_CONNECT);
         }
     }
