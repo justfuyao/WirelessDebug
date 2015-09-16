@@ -15,14 +15,18 @@ public class MsgExtraContent {
 
     }
 
-    User mSrcUser = null;
-    User mDstUser = null;
+    private User mSrcUser = null;
+    private User mDstUser = null;
 
     private byte[] mMsg;
 
     private int mReturnCRC8;
 
     private String mName;
+
+    private int mPort = -1;
+
+    private ByteBuffer mByteBuffer = null;
 
     public void setDstUser(User u) {
         mDstUser = u;
@@ -56,14 +60,12 @@ public class MsgExtraContent {
         mReturnCRC8 = crc8;
     }
 
-    int mParseResult = MessageUtils.PARSE_RESULT_UNDO;
-
-    int mPort = -1;
-
-    ByteBuffer mByteBuffer = null;
-
     public ByteBuffer getByteBuffer() {
         return mByteBuffer;
+    }
+
+    public void setByteBuffer(ByteBuffer b) {
+        mByteBuffer = b;
     }
 
     public int getPort() {
@@ -74,49 +76,49 @@ public class MsgExtraContent {
         mPort = port;
     }
 
-    public int productExtra(int type, ByteBuffer byteBuffer, Msg msg) {
+    public int productExtra(int type, Msg msg) {
         int length = 0;
         switch (type) {
             case MessageUtils.TYPE_SAY_HELLO:
                 // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,name-length
                 length = MessageUtils.BASE_TOTAL_BYTE_OFFSET + mSrcUser.get_Name().getBytes().length;
-                msg.set_Length(length);
-                byteBuffer = ByteBuffer.allocate(length);
-                byteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET);
-                byteBuffer.put(mSrcUser.get_Name().getBytes());
+                mByteBuffer = ByteBuffer.allocate(length);
+                mByteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET);
+                mByteBuffer.put(mSrcUser.get_Name().getBytes());
                 break;
             case MessageUtils.TYPE_TALK_MSG:
                 // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,content-length
                 length = MessageUtils.BASE_TOTAL_BYTE_OFFSET + mMsg.length;
-                byteBuffer = ByteBuffer.allocate(length);
-                byteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET);
-                byteBuffer.put(mMsg);
+                mByteBuffer = ByteBuffer.allocate(length);
+                mByteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET);
+                mByteBuffer.put(mMsg);
                 break;
             case MessageUtils.TYPE_RETURN_SAY_HELLO:
                 // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,crc8,name
                 length = MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.CRC8_BYTE_SIZE + mSrcUser.get_Name().getBytes().length;
-                byteBuffer = ByteBuffer.allocate(length);
-                byteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET);
-                byteBuffer.put(CaculateUtil.bigIntToByte(mReturnCRC8, MessageUtils.CRC8_BYTE_SIZE));
-                byteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.CRC8_BYTE_SIZE);
-                byteBuffer.put(mSrcUser.get_Name().getBytes());
+                mByteBuffer = ByteBuffer.allocate(length);
+                mByteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET);
+                mByteBuffer.put(CaculateUtil.bigIntToByte(mReturnCRC8, MessageUtils.CRC8_BYTE_SIZE));
+                mByteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.CRC8_BYTE_SIZE);
+                mByteBuffer.put(mSrcUser.get_Name().getBytes());
                 break;
             case MessageUtils.TYPE_RETURN_TALK_MSG:
                 // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,crc8
                 length = MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.CRC8_BYTE_SIZE;
-                byteBuffer = ByteBuffer.allocate(length);
-                byteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET);
-                byteBuffer.put(CaculateUtil.bigIntToByte(mReturnCRC8, MessageUtils.CRC8_BYTE_SIZE));
+                mByteBuffer = ByteBuffer.allocate(length);
+                mByteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET);
+                mByteBuffer.put(CaculateUtil.bigIntToByte(mReturnCRC8, MessageUtils.CRC8_BYTE_SIZE));
                 break;
             default:
-                throw new IllegalArgumentException("prepareProductMsg not support type " + MessageUtils.coverType2String(msg.get_Type()));
+                throw new IllegalArgumentException("prepareProductMsg not support type " + MessageUtils.coverType2String(msg.get_SendType()));
         }
+        msg.set_Length(length);
         return MessageUtils.PRODUCT_MSG_OK;
     }
 
     public int parseExtra(int type, int length, byte[] msgs) {
         switch (type) {
-            // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,crc8
+        // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,crc8
             case MessageUtils.TYPE_RETURN_TALK_MSG:
                 if ((length - MessageUtils.BASE_TOTAL_BYTE_OFFSET) >= MessageUtils.CRC8_BYTE_SIZE) {
                     mReturnCRC8 = CaculateUtil.bigBytesToInt(msgs, MessageUtils.BASE_TOTAL_BYTE_OFFSET);
@@ -128,6 +130,7 @@ public class MsgExtraContent {
                 int tempLen = length - MessageUtils.BASE_TOTAL_BYTE_OFFSET;
                 if (tempLen > 0) {
                     mName = new String(msgs, MessageUtils.BASE_TOTAL_BYTE_OFFSET, length - MessageUtils.BASE_TOTAL_BYTE_OFFSET);
+                    mSrcUser.set_Name(mName);
                 }
                 break;
 
@@ -138,6 +141,7 @@ public class MsgExtraContent {
                     if ((length - MessageUtils.BASE_TOTAL_BYTE_OFFSET - MessageUtils.CRC8_BYTE_SIZE) > 0) {
                         mName = new String(msgs, MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.CRC8_BYTE_SIZE, length
                                 - MessageUtils.BASE_TOTAL_BYTE_OFFSET - MessageUtils.CRC8_BYTE_SIZE);
+                        mSrcUser.set_Name(mName);
                     }
                 }
                 break;
@@ -155,4 +159,11 @@ public class MsgExtraContent {
         }
         return MessageUtils.PARSE_RESULT_DATA_OK;
     }
+
+    @Override
+    public String toString() {
+        return "SrcUser:" + mSrcUser + " DstUser:" + mDstUser + " mReturnCRC8:" + mReturnCRC8 + " mName:" + mName + " mPort:" + mPort + " ByteBuffer:"
+                + mByteBuffer;
+    }
+
 }

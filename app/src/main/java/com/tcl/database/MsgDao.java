@@ -23,13 +23,13 @@ public class MsgDao extends AbstractDao<Msg, Void> {
      * Can be used for QueryBuilder and for referencing column names.
     */
     public static class Properties {
-        public final static Property Id = new Property(0, Long.class, "id", true, "_id");
+        public final static Property _MsgUID = new Property(0, String.class, "_MsgUID", false, "__MSG_UID");
         public final static Property _UserUID = new Property(1, String.class, "_UserUID", false, "__USER_UID");
         public final static Property _Timestamps = new Property(2, long.class, "_Timestamps", false, "__TIMESTAMPS");
-        public final static Property _Type = new Property(3, int.class, "_Type", false, "__TYPE");
-        public final static Property _SendType = new Property(4, Integer.class, "_SendType", false, "__SEND_TYPE");
+        public final static Property _SendType = new Property(3, int.class, "_SendType", false, "__SEND_TYPE");
+        public final static Property _IsReceive = new Property(4, Integer.class, "_IsReceive", false, "__IS_RECEIVE");
         public final static Property _CRC8 = new Property(5, Integer.class, "_CRC8", false, "__CRC8");
-        public final static Property _Bytes = new Property(6, byte[].class, "_Bytes", true, "__BYTES");
+        public final static Property _Bytes = new Property(6, byte[].class, "_Bytes", false, "__BYTES");
         public final static Property _Length = new Property(7, Integer.class, "_Length", false, "__LENGTH");
         public final static Property _SendTime = new Property(8, Integer.class, "_SendTime", false, "__SEND_TIME");
     };
@@ -50,13 +50,13 @@ public class MsgDao extends AbstractDao<Msg, Void> {
     public static void createTable(SQLiteDatabase db, boolean ifNotExists) {
         String constraint = ifNotExists? "IF NOT EXISTS ": "";
         db.execSQL("CREATE TABLE " + constraint + "\"MSG\" (" + //
-                "\"_id\" INTEGER PRIMARY KEY AUTOINCREMENT ," + // 0: id
+                "\"__MSG_UID\" TEXT NOT NULL ," + // 0: _MsgUID
                 "\"__USER_UID\" TEXT NOT NULL ," + // 1: _UserUID
                 "\"__TIMESTAMPS\" INTEGER NOT NULL ," + // 2: _Timestamps
-                "\"__TYPE\" INTEGER NOT NULL ," + // 3: _Type
-                "\"__SEND_TYPE\" INTEGER," + // 4: _SendType
+                "\"__SEND_TYPE\" INTEGER NOT NULL ," + // 3: _SendType
+                "\"__IS_RECEIVE\" INTEGER," + // 4: _IsReceive
                 "\"__CRC8\" INTEGER," + // 5: _CRC8
-                "\"__BYTES\" BLOB PRIMARY KEY ," + // 6: _Bytes
+                "\"__BYTES\" BLOB," + // 6: _Bytes
                 "\"__LENGTH\" INTEGER," + // 7: _Length
                 "\"__SEND_TIME\" INTEGER);"); // 8: _SendTime
     }
@@ -71,18 +71,14 @@ public class MsgDao extends AbstractDao<Msg, Void> {
     @Override
     protected void bindValues(SQLiteStatement stmt, Msg entity) {
         stmt.clearBindings();
- 
-        Long id = entity.getId();
-        if (id != null) {
-            stmt.bindLong(1, id);
-        }
+        stmt.bindString(1, entity.get_MsgUID());
         stmt.bindString(2, entity.get_UserUID());
         stmt.bindLong(3, entity.get_Timestamps());
-        stmt.bindLong(4, entity.get_Type());
+        stmt.bindLong(4, entity.get_SendType());
  
-        Integer _SendType = entity.get_SendType();
-        if (_SendType != null) {
-            stmt.bindLong(5, _SendType);
+        Integer _IsReceive = entity.get_IsReceive();
+        if (_IsReceive != null) {
+            stmt.bindLong(5, _IsReceive);
         }
  
         Integer _CRC8 = entity.get_CRC8();
@@ -122,11 +118,11 @@ public class MsgDao extends AbstractDao<Msg, Void> {
     @Override
     public Msg readEntity(Cursor cursor, int offset) {
         Msg entity = new Msg( //
-            cursor.isNull(offset + 0) ? null : cursor.getLong(offset + 0), // id
+            cursor.getString(offset + 0), // _MsgUID
             cursor.getString(offset + 1), // _UserUID
             cursor.getLong(offset + 2), // _Timestamps
-            cursor.getInt(offset + 3), // _Type
-            cursor.isNull(offset + 4) ? null : cursor.getInt(offset + 4), // _SendType
+            cursor.getInt(offset + 3), // _SendType
+            cursor.isNull(offset + 4) ? null : cursor.getInt(offset + 4), // _IsReceive
             cursor.isNull(offset + 5) ? null : cursor.getInt(offset + 5), // _CRC8
             cursor.isNull(offset + 6) ? null : cursor.getBlob(offset + 6), // _Bytes
             cursor.isNull(offset + 7) ? null : cursor.getInt(offset + 7), // _Length
@@ -138,11 +134,11 @@ public class MsgDao extends AbstractDao<Msg, Void> {
     /** @inheritdoc */
     @Override
     public void readEntity(Cursor cursor, Msg entity, int offset) {
-        entity.setId(cursor.isNull(offset + 0) ? null : cursor.getLong(offset + 0));
+        entity.set_MsgUID(cursor.getString(offset + 0));
         entity.set_UserUID(cursor.getString(offset + 1));
         entity.set_Timestamps(cursor.getLong(offset + 2));
-        entity.set_Type(cursor.getInt(offset + 3));
-        entity.set_SendType(cursor.isNull(offset + 4) ? null : cursor.getInt(offset + 4));
+        entity.set_SendType(cursor.getInt(offset + 3));
+        entity.set_IsReceive(cursor.isNull(offset + 4) ? null : cursor.getInt(offset + 4));
         entity.set_CRC8(cursor.isNull(offset + 5) ? null : cursor.getInt(offset + 5));
         entity.set_Bytes(cursor.isNull(offset + 6) ? null : cursor.getBlob(offset + 6));
         entity.set_Length(cursor.isNull(offset + 7) ? null : cursor.getInt(offset + 7));

@@ -68,8 +68,9 @@ public class RegisterActivity extends Activity implements OnClickListener {
                 } else if (!cPassword.equals(password)) {
                     Toast.makeText(this, "Passwords are not same", Toast.LENGTH_SHORT).show();
                 } else {
-                    String uid = String.valueOf(System.currentTimeMillis());// UUID.randomUUID().toString();
-                    TalkApplication.getTalkApplication().setUser(new User(null, name, IPv4v6Utils.getLocalIPAddress(), uid, User.USER_STATUS_ONLINE, 0));
+                    // TODO: UUID.randomUUID().toString();
+                    String uid = String.valueOf(System.currentTimeMillis());
+                    TalkApplication.getTalkApplication().setUser(new User(name, IPv4v6Utils.getLocalIPAddress(), uid));
                     startActivity(new Intent(getApplicationContext(), UsersActivity.class));
                     finish();
                 }

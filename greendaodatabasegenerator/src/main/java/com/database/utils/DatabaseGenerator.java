@@ -21,20 +21,19 @@ public class DatabaseGenerator {
 
     private static void addUsersAndMsgs(Schema schema) {
         Entity user = schema.addEntity("User");
-        user.addIdProperty().autoincrement();
         user.addStringProperty("_Name");
         user.addStringProperty("_IpAddress");
         user.addStringProperty("_UID").notNull().primaryKey();
 
 
         Entity msg = schema.addEntity("Msg");
-        msg.addIdProperty().autoincrement();
+        msg.addStringProperty("_MsgUID").notNull().primaryKey();
         msg.addStringProperty("_UserUID").notNull();
         msg.addLongProperty("_Timestamps").notNull();
-        msg.addIntProperty("_Type").notNull();
-        msg.addIntProperty("_SendType");
+        msg.addIntProperty("_SendType").notNull();
+        msg.addIntProperty("_IsReceive");
         msg.addIntProperty("_CRC8");
-        msg.addByteArrayProperty("_Bytes").primaryKey();
+        msg.addByteArrayProperty("_Bytes");
         msg.addIntProperty("_Length");
         msg.addIntProperty("_SendTime");
 
@@ -50,7 +49,6 @@ public class DatabaseGenerator {
 
     private static void addCustomerOrder(Schema schema) {
         Entity customer = schema.addEntity("Customer");
-        customer.addIdProperty();
         customer.addStringProperty("name").notNull();
 
         Entity order = schema.addEntity("Order");

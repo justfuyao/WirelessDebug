@@ -92,6 +92,7 @@ public class NIOUDPSocketClient {
                                 TAG,
                                 "send to " + msg.getDstAddress() + "  " + msg.getPort() + " " + msg.getByteBuffer().toString() + " neirong shi "
                                         + LogExt.bytesToHexString(msg.getByteBuffer().array()));
+                        LogExt.d(TAG, "send msg is " + msg);
                         mDatagramChannel.send(msg.getByteBuffer(), new InetSocketAddress(InetAddress.getByName(msg.getDstAddress()), msg.getPort()));
                         if (null != mOnMessageSendListener) {
                             mOnMessageSendListener.onMsgSendOK(msg);

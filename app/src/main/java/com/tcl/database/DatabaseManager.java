@@ -3,6 +3,7 @@ package com.tcl.database;
 import android.content.Context;
 
 import com.tcl.database.UserDao.Properties;
+import com.tcl.utils.LogExt;
 import com.tcl.wirelessdebug.TalkApplication;
 
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import de.greenrobot.dao.query.Query;
 import de.greenrobot.dao.query.QueryBuilder;
 
 public class DatabaseManager {
+    private static final String TAG = "fuyao-DatabaseManager";
 
     private static DatabaseManager mDatabaseProxy = null;
 
@@ -24,7 +26,8 @@ public class DatabaseManager {
     private Context mContext;
     private DaoSession mDaoSession;
     private DaoMaster mDaoMaster;
-    private AsyncSession mAsyncSession;
+
+    private static final Object lockObject = new Object();
 
     private DatabaseManager(Context c) {
         mContext = c.getApplicationContext();
@@ -32,15 +35,27 @@ public class DatabaseManager {
         mDaoSession = TalkApplication.getDaoSession(mContext);
         mMsgDao = mDaoSession.getMsgDao();
         mUserDao = mDaoSession.getUserDao();
-        mAsyncSession = mDaoSession.startAsyncSession();
-        mAsyncSession.setListener(mProxyListenerThread);
-        mAsyncSession.setListenerMainThread(mProxyListenerMainThread);
+        // mAsyncSession.setListener(mProxyListenerThread);
+        // mAsyncSession.setListenerMainThread(mProxyListenerMainThread);
     }
 
-    // not threadsafe
+    public void startAsyncSession() {
+//        if (null == mAsyncSession) {
+//            LogExt.d(TAG,"startAsyncSession init");
+//            mAsyncSession = mDaoSession.startAsyncSession();
+//            mAsyncSession.setListener(mProxyListenerThread);
+//            mAsyncSession.setListenerMainThread(mProxyListenerMainThread);
+//        }
+    }
+
     public static DatabaseManager getInstance(Context c) {
         if (null == mDatabaseProxy) {
-            mDatabaseProxy = new DatabaseManager(c);
+            synchronized (lockObject) {
+                if (null == mDatabaseProxy) {
+                    DatabaseManager tempManager = new DatabaseManager(c);
+                    mDatabaseProxy = tempManager;
+                }
+            }
         }
         return mDatabaseProxy;
     }
@@ -91,30 +106,99 @@ public class DatabaseManager {
         }
     }
 
-    public AsyncOperation asynInsertOrUpdateUserAndNotify(User user) {
+    public List<Msg> queryMsg(String uid) {
+        Query<Msg> query = mMsgDao.queryBuilder().where(MsgDao.Properties._MsgUID.eq(uid)).build().forCurrentThread();
+        List<Msg> msgs = query.list();
+        return msgs;
+    }
+
+    public List<Msg> asynQueryMsg(String uid) {
+        List<Msg> msgs = null;
+        AsyncSession mAsyncSession = mDaoSession.startAsyncSession();
+        Query<Msg> query = mMsgDao.queryBuilder().where(MsgDao.Properties._MsgUID.eq(uid)).build();
+        AsyncOperation operation = mAsyncSession.queryList(query);
+        operation.waitForCompletion();
+        if (!operation.isFailed()) {
+            msgs = (List<Msg>) operation.getResult();
+        } else {
+            LogExt.e(TAG, "asynQueryMsg error:" + operation.getThrowable());
+        }
+        return msgs;
+    }
+
+    public long asynInsertMsg(Msg msg) {
+        AsyncSession mAsyncSession = mDaoSession.startAsyncSession();
+        AsyncOperation operation = mAsyncSession.insert(msg);
+        operation.waitForCompletion();
+        long ret = -1l;
+        if (!operation.isFailed()) {
+            if (null != operation.getResult()) {
+                ret = Long.valueOf(String.valueOf(operation.getResult()));
+                LogExt.d(TAG, "asynInsertMsg ok id is " + ret + " msg : " + msg);
+            }
+        } else {
+            LogExt.e(TAG, "asynInsertMsg error:" + operation.getThrowable() + " msg : " + msg);
+        }
+        return ret;
+    }
+
+    public void insertOrUpdateUser(User user) {
+        Query<User> query = mUserDao.queryBuilder().where(Properties._UID.eq(user.get_UID())).build().forCurrentThread();
+        User tempUser = query.unique();
+        if (null != tempUser) {
+            if (tempUser.compare(user) < 0) {
+                mUserDao.update(user);
+            }
+        } else {
+            mUserDao.insert(user);
+        }
+    }
+
+    public long asynInsertOrUpdateUser(User user) {
+        LogExt.d(TAG, "asynInsertOrUpdateUser user " + user);
+        long id = 0;
+        AsyncSession mAsyncSession = mDaoSession.startAsyncSession();
         Query<User> query = mUserDao.queryBuilder().where(Properties._UID.eq(user.get_UID())).build();
         AsyncOperation operation = mAsyncSession.queryUnique(query);
-        operation = (AsyncOperation) operation.waitForCompletion();
+        operation.waitForCompletion();
         if (!operation.isFailed()) {
             User tempUser = (User) operation.getResult();
             tempUser.setUserStatus(User.USER_STATUS_ONLINE);
             operation = mAsyncSession.refresh(tempUser);
-            operation = (AsyncOperation) operation.waitForCompletion();
+            operation.waitForCompletion();
         } else {
+            LogExt.e(TAG, "asynInsertOrUpdateUserAndNotify 1 error:" + operation.getThrowable());
             operation = mAsyncSession.insertOrReplace(user);
-            operation = (AsyncOperation) operation.waitForCompletion();
+            operation.waitForCompletion();
         }
         if (!operation.isFailed()) {
-            // TODO: notify
+            if (null != operation.getResult()) {
+                id = (long) operation.getResult();
+            }
+            LogExt.d(TAG, "asynInsertOrUpdateUserAndNotify 2 id " + id);
+        } else {
+            LogExt.e(TAG, "asynInsertOrUpdateUserAndNotify 2 error:" + operation.getThrowable());
         }
-        return operation;
+        return id;
     }
 
-    public AsyncOperation asynQueryAllUsers() {
+    public List<User> queryAllUsers(){
+        Query<User> query = mUserDao.queryBuilder().build().forCurrentThread();
+        return query.list();
+    }
+
+    public List<User> asynQueryAllUsers() {
+        List<User> lists = null;
+        AsyncSession mAsyncSession = mDaoSession.startAsyncSession();
         Query<User> query = mUserDao.queryBuilder().build();
         AsyncOperation operation = mAsyncSession.queryList(query);
         operation.waitForCompletion();
-        return operation;
+        if (!operation.isFailed()) {
+            lists = (List<User>) operation.getResult();
+        } else {
+            LogExt.e(TAG, "asynQueryAllUsers error:" + operation.getThrowable());
+        }
+        return lists;
     }
 
     public LazyList<Msg> queryUserAllMsg(User user, String orderBy) {

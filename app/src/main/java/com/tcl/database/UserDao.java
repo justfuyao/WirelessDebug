@@ -14,7 +14,7 @@ import com.tcl.database.User;
 /** 
  * DAO for table "USER".
 */
-public class UserDao extends AbstractDao<User, Void> {
+public class UserDao extends AbstractDao<User, String> {
 
     public static final String TABLENAME = "USER";
 
@@ -23,10 +23,9 @@ public class UserDao extends AbstractDao<User, Void> {
      * Can be used for QueryBuilder and for referencing column names.
     */
     public static class Properties {
-        public final static Property Id = new Property(0, Long.class, "id", true, "_id");
-        public final static Property _Name = new Property(1, String.class, "_Name", false, "__NAME");
-        public final static Property _IpAddress = new Property(2, String.class, "_IpAddress", false, "__IP_ADDRESS");
-        public final static Property _UID = new Property(3, String.class, "_UID", true, "__UID");
+        public final static Property _Name = new Property(0, String.class, "_Name", false, "__NAME");
+        public final static Property _IpAddress = new Property(1, String.class, "_IpAddress", false, "__IP_ADDRESS");
+        public final static Property _UID = new Property(2, String.class, "_UID", true, "__UID");
     };
 
     private DaoSession daoSession;
@@ -45,10 +44,9 @@ public class UserDao extends AbstractDao<User, Void> {
     public static void createTable(SQLiteDatabase db, boolean ifNotExists) {
         String constraint = ifNotExists? "IF NOT EXISTS ": "";
         db.execSQL("CREATE TABLE " + constraint + "\"USER\" (" + //
-                "\"_id\" INTEGER PRIMARY KEY AUTOINCREMENT ," + // 0: id
-                "\"__NAME\" TEXT," + // 1: _Name
-                "\"__IP_ADDRESS\" TEXT," + // 2: _IpAddress
-                "\"__UID\" TEXT PRIMARY KEY NOT NULL );"); // 3: _UID
+                "\"__NAME\" TEXT," + // 0: _Name
+                "\"__IP_ADDRESS\" TEXT," + // 1: _IpAddress
+                "\"__UID\" TEXT PRIMARY KEY NOT NULL );"); // 2: _UID
     }
 
     /** Drops the underlying database table. */
@@ -62,21 +60,16 @@ public class UserDao extends AbstractDao<User, Void> {
     protected void bindValues(SQLiteStatement stmt, User entity) {
         stmt.clearBindings();
  
-        Long id = entity.getId();
-        if (id != null) {
-            stmt.bindLong(1, id);
-        }
- 
         String _Name = entity.get_Name();
         if (_Name != null) {
-            stmt.bindString(2, _Name);
+            stmt.bindString(1, _Name);
         }
  
         String _IpAddress = entity.get_IpAddress();
         if (_IpAddress != null) {
-            stmt.bindString(3, _IpAddress);
+            stmt.bindString(2, _IpAddress);
         }
-        stmt.bindString(4, entity.get_UID());
+        stmt.bindString(3, entity.get_UID());
     }
 
     @Override
@@ -87,18 +80,17 @@ public class UserDao extends AbstractDao<User, Void> {
 
     /** @inheritdoc */
     @Override
-    public Void readKey(Cursor cursor, int offset) {
-        return null;
+    public String readKey(Cursor cursor, int offset) {
+        return cursor.getString(offset + 2);
     }    
 
     /** @inheritdoc */
     @Override
     public User readEntity(Cursor cursor, int offset) {
         User entity = new User( //
-            cursor.isNull(offset + 0) ? null : cursor.getLong(offset + 0), // id
-            cursor.isNull(offset + 1) ? null : cursor.getString(offset + 1), // _Name
-            cursor.isNull(offset + 2) ? null : cursor.getString(offset + 2), // _IpAddress
-            cursor.getString(offset + 3) // _UID
+            cursor.isNull(offset + 0) ? null : cursor.getString(offset + 0), // _Name
+            cursor.isNull(offset + 1) ? null : cursor.getString(offset + 1), // _IpAddress
+            cursor.getString(offset + 2) // _UID
         );
         return entity;
     }
@@ -106,23 +98,25 @@ public class UserDao extends AbstractDao<User, Void> {
     /** @inheritdoc */
     @Override
     public void readEntity(Cursor cursor, User entity, int offset) {
-        entity.setId(cursor.isNull(offset + 0) ? null : cursor.getLong(offset + 0));
-        entity.set_Name(cursor.isNull(offset + 1) ? null : cursor.getString(offset + 1));
-        entity.set_IpAddress(cursor.isNull(offset + 2) ? null : cursor.getString(offset + 2));
-        entity.set_UID(cursor.getString(offset + 3));
+        entity.set_Name(cursor.isNull(offset + 0) ? null : cursor.getString(offset + 0));
+        entity.set_IpAddress(cursor.isNull(offset + 1) ? null : cursor.getString(offset + 1));
+        entity.set_UID(cursor.getString(offset + 2));
      }
     
     /** @inheritdoc */
     @Override
-    protected Void updateKeyAfterInsert(User entity, long rowId) {
-        // Unsupported or missing PK type
-        return null;
+    protected String updateKeyAfterInsert(User entity, long rowId) {
+        return entity.get_UID();
     }
     
     /** @inheritdoc */
     @Override
-    public Void getKey(User entity) {
-        return null;
+    public String getKey(User entity) {
+        if(entity != null) {
+            return entity.get_UID();
+        } else {
+            return null;
+        }
     }
 
     /** @inheritdoc */
