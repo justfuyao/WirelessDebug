@@ -1,5 +1,6 @@
 package com.tcl.database;
 
+import com.tcl.config.Configuration;
 import com.tcl.database.DaoSession;
 
 import de.greenrobot.dao.AbstractDao;
@@ -12,8 +13,10 @@ import com.tcl.bean.MessageUtils;
 import com.tcl.bean.MsgExtraContent;
 import com.tcl.utils.CaculateUtil;
 import com.tcl.utils.LogExt;
+import com.tcl.utils.TimeUtil;
 
 import java.nio.ByteBuffer;
+
 // KEEP INCLUDES END
 /**
  * Entity mapped to table "MSG".
@@ -38,20 +41,24 @@ public class Msg {
     /** Used for active entity operations. */
     private transient MsgDao myDao;
 
-
     // KEEP FIELDS - put your custom fields here
     public static final int MSG_SEND_TYPE_SEND = 1;
     public static final int MSG_SEND_TYPE_RECEIVE = 2;
 
+    public static final int MSG_SEND_TIME_MAX = Configuration.MSG_RESEND_MAX_TIME;
+    public static final int MSG_SEND_TIME_OK = -1;
+
     private static final String TAG = "fuyao-Msg";
 
     MsgExtraContent mMsgExtraContent = new MsgExtraContent();
+
     // KEEP FIELDS END
 
     public Msg() {
     }
 
-    public Msg(String _MsgUID, String _UserUID, long _Timestamps, int _SendType, Integer _IsReceive, Integer _CRC8, byte[] _Bytes, Integer _Length, Integer _SendTime) {
+    public Msg(String _MsgUID, String _UserUID, long _Timestamps, int _SendType, Integer _IsReceive, Integer _CRC8, byte[] _Bytes, Integer _Length,
+            Integer _SendTime) {
         this._MsgUID = _MsgUID;
         this._UserUID = _UserUID;
         this._Timestamps = _Timestamps;
@@ -61,6 +68,7 @@ public class Msg {
         this._Bytes = _Bytes;
         this._Length = _Length;
         this._SendTime = _SendTime;
+        parseExtraMsg();
     }
 
     /** called by internal mechanisms, do not call yourself. */
@@ -74,7 +82,10 @@ public class Msg {
         return _MsgUID;
     }
 
-    /** Not-null value; ensure this value is available before it is saved to the database. */
+    /**
+     * Not-null value; ensure this value is available before it is saved to the
+     * database.
+     */
     public void set_MsgUID(String _MsgUID) {
         this._MsgUID = _MsgUID;
     }
@@ -84,7 +95,10 @@ public class Msg {
         return _UserUID;
     }
 
-    /** Not-null value; ensure this value is available before it is saved to the database. */
+    /**
+     * Not-null value; ensure this value is available before it is saved to the
+     * database.
+     */
     public void set_UserUID(String _UserUID) {
         this._UserUID = _UserUID;
     }
@@ -145,27 +159,36 @@ public class Msg {
         this._SendTime = _SendTime;
     }
 
-    /** Convenient call for {@link AbstractDao#delete(Object)}. Entity must attached to an entity context. */
+    /**
+     * Convenient call for {@link AbstractDao#delete(Object)}. Entity must
+     * attached to an entity context.
+     */
     public void delete() {
         if (myDao == null) {
             throw new DaoException("Entity is detached from DAO context");
-        }    
+        }
         myDao.delete(this);
     }
 
-    /** Convenient call for {@link AbstractDao#update(Object)}. Entity must attached to an entity context. */
+    /**
+     * Convenient call for {@link AbstractDao#update(Object)}. Entity must
+     * attached to an entity context.
+     */
     public void update() {
         if (myDao == null) {
             throw new DaoException("Entity is detached from DAO context");
-        }    
+        }
         myDao.update(this);
     }
 
-    /** Convenient call for {@link AbstractDao#refresh(Object)}. Entity must attached to an entity context. */
+    /**
+     * Convenient call for {@link AbstractDao#refresh(Object)}. Entity must
+     * attached to an entity context.
+     */
     public void refresh() {
         if (myDao == null) {
             throw new DaoException("Entity is detached from DAO context");
-        }    
+        }
         myDao.refresh(this);
     }
 
@@ -193,6 +216,14 @@ public class Msg {
 
     public void setExtraReturnCrc8(int crc8) {
         mMsgExtraContent.setExtraReturnCrc8(crc8);
+    }
+
+    public void setExtraMsg(String msg) {
+        mMsgExtraContent.setExtraMsg(null == msg ? null : msg.getBytes());
+    }
+
+    public String getExtraMsgString() {
+        return mMsgExtraContent.getExtraMsgString();
     }
 
     public void setByteBuffer(ByteBuffer b) {
@@ -259,8 +290,12 @@ public class Msg {
     }
 
     // receive buffer base
-    // #length-4###CRC8-4####IP_S-32###IP_D-32####type-1####time-8##
-    // |_________|_________|_________|__________|_________|_________|
+    // #length-4###CRC8-4####IP_S-32###UID_S-8####IP_D-32#####UID_D-8###type-1####time-8##
+    // |_________|_________|_________|__________|__________|_________|_________|_________|
+    public void parseExtraMsg() {
+        mMsgExtraContent.parseExtra(_SendType, _Length, _Bytes);
+    }
+
     public final int parseBuffer(ByteBuffer buffer) {
         int ret = MessageUtils.PARSE_RESULT_DATA_ERROR;
         if (null != buffer) {
@@ -330,11 +365,30 @@ public class Msg {
         return 1;
     }
 
+    public String getDisplayString() {
+        StringBuilder sBuilder = new StringBuilder();
+        User temp = null;
+
+        temp = getSrcUser();
+        if (null != temp) {
+            sBuilder.append(temp.get_Name());
+            sBuilder.append("\n");
+            sBuilder.append(temp.get_IpAddress());
+            sBuilder.append("  ");
+            sBuilder.append(temp.get_UID());
+            sBuilder.append("\n");
+        }
+        sBuilder.append(TimeUtil.format2TimeString(_Timestamps));
+        sBuilder.append("\n");
+        sBuilder.append(getExtraMsgString());
+        return sBuilder.toString();
+    }
+
     @Override
     public String toString() {
-        return "_MsgUID:" + _MsgUID + " _UserUID:" + _UserUID + " _Timestamps = " + _Timestamps + " _Type:" + MessageUtils.coverType2String(_SendType) + " _IsReceive:" + _IsReceive
-                + " CRC8:" + _CRC8 + " _Length:" + _Length + " _SendTime:" + _SendTime + " bytes:" + LogExt.bytesToHexString(_Bytes) + " ---------Extra:"
-                + mMsgExtraContent;
+        return "_MsgUID:" + _MsgUID + " _UserUID:" + _UserUID + " _Timestamps = " + _Timestamps + " _Type:" + MessageUtils.coverType2String(_SendType)
+                + " _IsReceive:" + _IsReceive + " CRC8:" + _CRC8 + " _Length:" + _Length + " _SendTime:" + _SendTime + " bytes:"
+                + LogExt.bytesToHexString(_Bytes) + " ---------Extra:" + mMsgExtraContent;
     }
     // KEEP METHODS END
 

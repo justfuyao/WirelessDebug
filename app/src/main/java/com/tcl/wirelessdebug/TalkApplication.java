@@ -20,7 +20,7 @@ public class TalkApplication extends Application {
 
     private static TalkApplication mTalkApplication = null;
 
-    private static DatabaseManager mDatabaseProxy = null;
+    private static DatabaseManager mDatabaseManager = null;
 
     private static DaoMaster mDaoMaster;
 
@@ -86,7 +86,7 @@ public class TalkApplication extends Application {
     }
 
     public static DatabaseManager getDatabaseProxy() {
-        return mDatabaseProxy;
+        return mDatabaseManager;
     }
 
     // not threadSafe
@@ -115,8 +115,8 @@ public class TalkApplication extends Application {
         if (null == mTalkApplication) {
             mTalkApplication = this;
         }
-        if (null == mDatabaseProxy) {
-            mDatabaseProxy = DatabaseManager.getInstance(this);
+        if (null == mDatabaseManager) {
+            mDatabaseManager = DatabaseManager.getInstance(this);
         }
         mUser = restoreUser();
 

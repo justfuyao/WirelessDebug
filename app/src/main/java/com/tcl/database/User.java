@@ -7,11 +7,16 @@ import de.greenrobot.dao.DaoException;
 
 // KEEP INCLUDES - put your custom includes here
 import com.tcl.bean.UserExtraContent;
+
+import android.os.Parcel;
+import android.os.Parcelable;
+
+//public class User implements Parcelable {
 // KEEP INCLUDES END
 /**
  * Entity mapped to table "USER".
  */
-public class User {
+public class User implements Parcelable {
 
     private String _Name;
     private String _IpAddress;
@@ -24,12 +29,12 @@ public class User {
     /** Used for active entity operations. */
     private transient UserDao myDao;
 
-
     // KEEP FIELDS - put your custom fields here
     public static final int USER_STATUS_ONLINE = 1;
     public static final int USER_STATUS_OFFLINE = 2;
 
     public UserExtraContent mUserExtraContent = new UserExtraContent();
+
     // KEEP FIELDS END
 
     public User() {
@@ -72,7 +77,10 @@ public class User {
         return _UID;
     }
 
-    /** Not-null value; ensure this value is available before it is saved to the database. */
+    /**
+     * Not-null value; ensure this value is available before it is saved to the
+     * database.
+     */
     public void set_UID(String _UID) {
         this._UID = _UID;
     }
@@ -81,65 +89,70 @@ public class User {
     public void delete() {
         if (myDao == null) {
             throw new DaoException("Entity is detached from DAO context");
-        }    
+        }
         myDao.delete(this);
     }
 
-    /** Convenient call for {@link AbstractDao#update(Object)}. Entity must attached to an entity context. */
+    /**
+     * Convenient call for {@link AbstractDao#update(Object)}. Entity must
+     * attached to an entity context.
+     */
     public void update() {
         if (myDao == null) {
             throw new DaoException("Entity is detached from DAO context");
-        }    
+        }
         myDao.update(this);
     }
 
-    /** Convenient call for {@link AbstractDao#refresh(Object)}. Entity must attached to an entity context. */
+    /**
+     * Convenient call for {@link AbstractDao#refresh(Object)}. Entity must
+     * attached to an entity context.
+     */
     public void refresh() {
         if (myDao == null) {
             throw new DaoException("Entity is detached from DAO context");
-        }    
+        }
         myDao.refresh(this);
     }
 
     // KEEP METHODS - put your custom methods here
 
-//    public User(Parcel parcel) {
-//        this.id = parcel.readLong();
-//        this._Name = parcel.readString();
-//        this._IpAddress = parcel.readString();
-//        this._UID = parcel.readString();
-//    }
-//
-//    public void copyInfo(User srcUser) {
-//        this._IpAddress = srcUser._IpAddress;
-//        this._Name = srcUser._Name;
-//    }
-//
-//    public final static Parcelable.Creator<User> CREATOR = new Parcelable.Creator<User>() {
-//
-//        @Override
-//        public User createFromParcel(Parcel parcel) {
-//            return new User(parcel);
-//        }
-//
-//        @Override
-//        public User[] newArray(int size) {
-//            return new User[size];
-//        }
-//    };
-//
-//    @Override
-//    public int describeContents() {
-//        return 0;
-//    }
-//
-//    @Override
-//    public void writeToParcel(Parcel dest, int flags) {
-//        dest.writeLong(id);
-//        dest.writeString(_Name);
-//        dest.writeString(_IpAddress);
-//        dest.writeString(_UID);
-//    }
+    public User(Parcel parcel) {
+        this._Name = parcel.readString();
+        this._IpAddress = parcel.readString();
+        this._UID = parcel.readString();
+    }
+
+    public void copyInfo(User srcUser) {
+        this._IpAddress = srcUser._IpAddress;
+        this._Name = srcUser._Name;
+    }
+
+    public final static Parcelable.Creator<User> CREATOR = new Parcelable.Creator<User>() {
+
+        @Override
+        public User createFromParcel(Parcel parcel) {
+            return new User(parcel);
+        }
+
+        @Override
+        public User[] newArray(int size) {
+            return new User[size];
+        }
+    };
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(_Name);
+        dest.writeString(_IpAddress);
+        dest.writeString(_UID);
+    }
+
     public int compare(User user) {
         if (null == user || null == user._Name || user._IpAddress == null || null == _Name || null == _IpAddress) {
             return -1;

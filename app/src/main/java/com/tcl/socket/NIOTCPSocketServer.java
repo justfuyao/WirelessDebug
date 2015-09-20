@@ -1,4 +1,4 @@
-package com.tcl.exchange;
+package com.tcl.socket;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -124,7 +124,8 @@ public class NIOTCPSocketServer {
 
                             }
                             if (null != mHandleMessageInter) {
-//                                mHandleMessageInter.handleMSGRead(mByteBuffer, channel.);
+                                // mHandleMessageInter.handleMSGRead(mByteBuffer,
+                                // channel.);
                             } else {
                                 LogExt.e(TAG, "mHandleMessageInter is null !!!!!");
                             }
@@ -132,7 +133,7 @@ public class NIOTCPSocketServer {
                         if (keytmp.isWritable()) {
                             LogExt.d(TAG, "RequestHander isWritable");
                             if (null != mHandleMessageInter) {
-//                                mHandleMessageInter.handleMSGWrite();
+                                // mHandleMessageInter.handleMSGWrite();
                             } else {
                                 LogExt.e(TAG, "mHandleMessageInter is null !!!!!");
                             }

@@ -22,6 +22,8 @@ public class MsgExtraContent {
 
     private int mReturnCRC8;
 
+    private long mReturnTime;
+
     private String mName;
 
     private int mPort = -1;
@@ -48,7 +50,7 @@ public class MsgExtraContent {
         return mName;
     }
 
-    public String getExtraMsg() {
+    public String getExtraMsgString() {
         return (mMsg == null ? "" : new String(mMsg));
     }
 
@@ -58,6 +60,14 @@ public class MsgExtraContent {
 
     public void setExtraReturnCrc8(int crc8) {
         mReturnCRC8 = crc8;
+    }
+
+    public byte[] getExtraMsg() {
+        return mMsg;
+    }
+
+    public void setExtraMsg(byte[] m) {
+        mMsg = m;
     }
 
     public ByteBuffer getByteBuffer() {
@@ -103,11 +113,13 @@ public class MsgExtraContent {
                 mByteBuffer.put(mSrcUser.get_Name().getBytes());
                 break;
             case MessageUtils.TYPE_RETURN_TALK_MSG:
-                // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,crc8
-                length = MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.CRC8_BYTE_SIZE;
+                // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,crc8-4,msg-sendtime-8
+                length = MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.CRC8_BYTE_SIZE + MessageUtils.TIME_BYTE_SIZE;
                 mByteBuffer = ByteBuffer.allocate(length);
                 mByteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET);
                 mByteBuffer.put(CaculateUtil.bigIntToByte(mReturnCRC8, MessageUtils.CRC8_BYTE_SIZE));
+                mByteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.TIME_BYTE_SIZE);
+                mByteBuffer.put(CaculateUtil.long2Byte(msg.get_Timestamps()));
                 break;
             default:
                 throw new IllegalArgumentException("prepareProductMsg not support type " + MessageUtils.coverType2String(msg.get_SendType()));
@@ -117,20 +129,31 @@ public class MsgExtraContent {
     }
 
     public int parseExtra(int type, int length, byte[] msgs) {
+        int ret = MessageUtils.PARSE_RESULT_DATA_OK;
         switch (type) {
         // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,crc8
             case MessageUtils.TYPE_RETURN_TALK_MSG:
-                if ((length - MessageUtils.BASE_TOTAL_BYTE_OFFSET) >= MessageUtils.CRC8_BYTE_SIZE) {
+                int tempLen = length - MessageUtils.BASE_TOTAL_BYTE_OFFSET;
+                if (tempLen >= MessageUtils.CRC8_BYTE_SIZE) {
                     mReturnCRC8 = CaculateUtil.bigBytesToInt(msgs, MessageUtils.BASE_TOTAL_BYTE_OFFSET);
+                    if (tempLen - MessageUtils.CRC8_BYTE_SIZE >= MessageUtils.TIME_BYTE_SIZE) {
+                        mReturnTime = CaculateUtil.bytes2long(msgs, MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.TIME_BYTE_SIZE);
+                    }
+                } else {
+                    ret = MessageUtils.PARSE_RESULT_DATA_NOT_ENOUGH;
                 }
                 break;
 
             // length-4,crc8-4,ipS-32,ipD-32,type-1,time-8,name-length
             case MessageUtils.TYPE_SAY_HELLO:
-                int tempLen = length - MessageUtils.BASE_TOTAL_BYTE_OFFSET;
+                tempLen = length - MessageUtils.BASE_TOTAL_BYTE_OFFSET;
                 if (tempLen > 0) {
                     mName = new String(msgs, MessageUtils.BASE_TOTAL_BYTE_OFFSET, length - MessageUtils.BASE_TOTAL_BYTE_OFFSET);
-                    mSrcUser.set_Name(mName);
+                    if (null != mSrcUser) {
+                        mSrcUser.set_Name(mName);
+                    }
+                } else {
+                    ret = MessageUtils.PARSE_RESULT_DATA_NOT_ENOUGH;
                 }
                 break;
 
@@ -141,8 +164,12 @@ public class MsgExtraContent {
                     if ((length - MessageUtils.BASE_TOTAL_BYTE_OFFSET - MessageUtils.CRC8_BYTE_SIZE) > 0) {
                         mName = new String(msgs, MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.CRC8_BYTE_SIZE, length
                                 - MessageUtils.BASE_TOTAL_BYTE_OFFSET - MessageUtils.CRC8_BYTE_SIZE);
-                        mSrcUser.set_Name(mName);
+                        if (null != mSrcUser) {
+                            mSrcUser.set_Name(mName);
+                        }
                     }
+                } else {
+                    ret = MessageUtils.PARSE_RESULT_DATA_NOT_ENOUGH;
                 }
                 break;
 
@@ -152,12 +179,14 @@ public class MsgExtraContent {
                 if (size > 0) {
                     mMsg = new byte[size];
                     System.arraycopy(msgs, MessageUtils.BASE_TOTAL_BYTE_OFFSET, mMsg, 0, size);
+                } else {
+                    ret = MessageUtils.PARSE_RESULT_DATA_NOT_ENOUGH;
                 }
                 break;
             default:
                 break;
         }
-        return MessageUtils.PARSE_RESULT_DATA_OK;
+        return ret;
     }
 
     @Override

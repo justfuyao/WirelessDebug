@@ -39,11 +39,11 @@ import com.tcl.config.Configuration;
 import com.tcl.database.DatabaseManager;
 import com.tcl.database.Msg;
 import com.tcl.database.User;
-import com.tcl.exchange.NIOUDPSocketClient;
-import com.tcl.exchange.NIOUDPSocketServer;
 import com.tcl.inter.DispatchMessageInter;
 import com.tcl.inter.HandleMessageInter;
 import com.tcl.inter.OnMessageSendListener;
+import com.tcl.socket.NIOUDPSocketClient;
+import com.tcl.socket.NIOUDPSocketServer;
 import com.tcl.utils.LogExt;
 
 public class ExchangeMsgService extends Service implements HandleMessageInter, OnMessageSendListener {
@@ -219,12 +219,12 @@ public class ExchangeMsgService extends Service implements HandleMessageInter, O
 
         if (msgType == MessageUtils.TYPE_SAY_HELLO || msgType == MessageUtils.TYPE_RETURN_SAY_HELLO) {
             User srcUser = msg.getSrcUser();
-            //mDatabaseManager.asynInsertOrUpdateUser(srcUser);
+            // mDatabaseManager.asynInsertOrUpdateUser(srcUser);
             mDatabaseManager.insertOrUpdateUser(srcUser);
             LogExt.d(TAG, "handleReceiveMsg srcUser insert out is " + srcUser);
         }
 
-        //List<Msg> msgs = mDatabaseManager.asynQueryMsg(msg.get_MsgUID());
+        // List<Msg> msgs = mDatabaseManager.asynQueryMsg(msg.get_MsgUID());
         List<Msg> msgs = mDatabaseManager.queryMsg(msg.get_MsgUID());
         if (null != msgs) {
             for (Msg tempMsg : msgs) {
@@ -234,6 +234,14 @@ public class ExchangeMsgService extends Service implements HandleMessageInter, O
                 }
             }
         }
+        
+        if (msgType == MessageUtils.TYPE_RETURN_TALK_MSG) {
+//            tempMsg.set_SendTime(Msg.MSG_SEND_TIME_OK);
+//            tempMsg.update();
+            LogExt.d(TAG, "handleReceiveMsg receive duplicate msg " + msg);
+        }
+        
+        
         long id = mDatabaseManager.asynInsertMsg(msg);
         LogExt.d(TAG, "handleMSGRead received new msg and insert id is " + id + " msg: " + msg);
         return 1;

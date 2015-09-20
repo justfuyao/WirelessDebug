@@ -28,6 +28,7 @@ import com.tcl.database.User;
 import com.tcl.inter.DispatchMessageInter;
 import com.tcl.utils.LogExt;
 
+import java.util.Collections;
 import java.util.List;
 
 public class UsersActivity extends Activity implements DispatchMessageInter, OnClickListener, OnItemClickListener, LoaderCallbacks<Object>, ServiceConnection {
@@ -39,10 +40,11 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
     private TextView mSelfTextView = null;
 
     List<User> mTalkUsers = null;
+
     UserAdapter mUserAdapter = null;
     TalkApplication mTalkApplication = null;
     Msg mSendMsg = null;
-    DatabaseManager mDatabaseProxy = null;
+    DatabaseManager mDatabaseManager = null;
 
     ExchangeMsgService mExchangeMsgService = null;
 
@@ -60,7 +62,7 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
 
         mTalkApplication = TalkApplication.getTalkApplication();
         final User user = mTalkApplication.getUser();
-        String selfText = "I'm " + user.get_Name() + "\n" + user.get_IpAddress() + "\n";
+        String selfText = "I'm " + user.get_Name() + "\n" + user.get_IpAddress() + "\n" + user.get_UID();
         mSelfTextView.setText(selfText);
 
         mUsersListView = (ListView) findViewById(R.id.users);
@@ -68,11 +70,10 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
         mUsersListView.setAdapter(mUserAdapter);
         mUsersListView.setOnItemClickListener(this);
 
-        mDatabaseProxy = TalkApplication.getDatabaseProxy();
-
-        getLoaderManager().restartLoader(MyAsynLoader.ID_QUERY_ALL_USERS, null, this);
+        mDatabaseManager = TalkApplication.getDatabaseProxy();
 
         bindService(new Intent(getApplicationContext(), ExchangeMsgService.class), this, BIND_AUTO_CREATE);
+        getLoaderManager().restartLoader(MyAsynLoader.ID_QUERY_ALL_USERS, null, this);
     }
 
     private Msg getSendMsg() {
@@ -140,7 +141,7 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
             // User.coverStatus2String(user.get_Status()) + "\n" +
             // user.get_IpAddress() + "      " + msgString;
 
-            String diString = user.get_Name() + "\n" + User.coverStatus2String(user.getUserStatus()) + "\n" + user.get_IpAddress();
+            String diString = user.get_Name() + "\n" + User.coverStatus2String(user.getUserStatus()) + "\n" + user.get_IpAddress() + "\n" + user.get_UID();
             textView.setText(diString);
             return textView;
         }
@@ -165,10 +166,10 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         User talkUser = mTalkUsers.get(position);
-        // Intent intent = new Intent();
-        // mUserAdapter.notifyDataSetChanged();
-        // intent.putExtra("user", talkUser).setClass(this, TalkActivity.class);
-        // startActivity(intent);
+        Intent intent = new Intent();
+        mUserAdapter.notifyDataSetChanged();
+        intent.putExtra("user", talkUser).setClass(this, TalkActivity.class);
+        startActivity(intent);
     }
 
     @Override
@@ -177,7 +178,29 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
             case MessageUtils.TYPE_SAY_HELLO:
             case MessageUtils.TYPE_RETURN_SAY_HELLO:
                 LogExt.d(TAG, "on new msg get a user do reload users");
-                getLoaderManager().restartLoader(MyAsynLoader.ID_QUERY_ALL_USERS, null, this);
+                // getLoaderManager().restartLoader(MyAsynLoader.ID_QUERY_ALL_USERS,
+                // null, this);
+                boolean has = false;
+                User user = msg.getSrcUser();
+                user.setUserStatus(User.USER_STATUS_ONLINE);
+                synchronized (mTalkUsers) {
+                    for (User tempUser : mTalkUsers) {
+                        if (user.get_UID().equals(tempUser.get_UID())) {
+                            tempUser.setUserStatus(User.USER_STATUS_ONLINE);
+                            has = true;
+                            break;
+                        }
+                    }
+                    if (!has) {
+                        mTalkUsers.add(0, user);
+                    }
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mUserAdapter.notifyDataSetChanged();
+                        }
+                    });
+                }
                 break;
             case MessageUtils.TYPE_TALK_MSG:
                 break;
@@ -191,7 +214,7 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
     @Override
     public Loader<Object> onCreateLoader(int id, Bundle args) {
         LogExt.d(TAG, "onCreateLoader id " + id);
-        return new MyAsynLoader<Object>(getApplicationContext(), id, args, mDatabaseProxy);
+        return new MyAsynLoader<Object>(getApplicationContext(), id, args, mDatabaseManager);
     }
 
     @Override
@@ -199,7 +222,7 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
         int id = loader.getId();
         switch (id) {
             case MyAsynLoader.ID_QUERY_ALL_USERS:
-                mTalkUsers = (List<User>) data;
+                mTalkUsers = Collections.synchronizedList((List<User>) data);
                 LogExt.d(TAG, "onLoadFinished mTalkUsers is " + (mTalkUsers == null ? "null" : mTalkUsers.size()));
                 mUserAdapter.notifyDataSetChanged();
                 break;
@@ -242,7 +265,7 @@ public class UsersActivity extends Activity implements DispatchMessageInter, OnC
             LogExt.d(TAG, "MyAsynLoader loadInBackground id  = " + id);
             switch (id) {
                 case ID_QUERY_ALL_USERS:
-//                    ret = (Object) dManager.asynQueryAllUsers();
+                    // ret = (Object) dManager.asynQueryAllUsers();
                     ret = (Object) dManager.queryAllUsers();
                     break;
 

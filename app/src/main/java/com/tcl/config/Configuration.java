@@ -11,6 +11,6 @@ public class Configuration {
     public static final int MSG_RESEND_MAX_TIME = 3;
 
     public static final String UDP_BROADCAST_ADDRESS = "255.255.255.255";
-    public static final String UDP_BROADCAST_UID = "88888888";
+    public static final String UDP_BROADCAST_UID = "1234567890123456";
     public static final String UDP_BROADCAST_NAME = "Broadcast";
 }

@@ -30,8 +30,7 @@ public class DaoSession extends AbstractDaoSession {
     private final UserDao userDao;
     private final MsgDao msgDao;
 
-    public DaoSession(SQLiteDatabase db, IdentityScopeType type, Map<Class<? extends AbstractDao<?, ?>>, DaoConfig>
-            daoConfigMap) {
+    public DaoSession(SQLiteDatabase db, IdentityScopeType type, Map<Class<? extends AbstractDao<?, ?>>, DaoConfig> daoConfigMap) {
         super(db);
 
         userDaoConfig = daoConfigMap.get(UserDao.class).clone();
@@ -46,7 +45,7 @@ public class DaoSession extends AbstractDaoSession {
         registerDao(User.class, userDao);
         registerDao(Msg.class, msgDao);
     }
-    
+
     public void clear() {
         userDaoConfig.getIdentityScope().clear();
         msgDaoConfig.getIdentityScope().clear();

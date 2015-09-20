@@ -1,11 +1,5 @@
 package com.tcl.bean;
 
-import com.tcl.database.Msg;
-import com.tcl.database.User;
-import com.tcl.utils.CaculateUtil;
-import com.tcl.utils.LogExt;
-
-import java.nio.ByteBuffer;
 
 public class MessageUtils {
     private static final String TAG = "fuyao-MessageUtils";
@@ -17,7 +11,7 @@ public class MessageUtils {
     public static final int CRC8_BYTE_SIZE = 4;
     public static final int IP_SCR_BYTE_SIZE = 32;
     // TODO:now use time instead caculate uid
-    public static final int UID_SRC_BYTE_SIZE = 8;
+    public static final int UID_SRC_BYTE_SIZE = 16;
     public static final int IP_DST_BYTE_SIZE = IP_SCR_BYTE_SIZE;
     // TODO:now use time instead caculate uid
     public static final int UID_DST_BYTE_SIZE = UID_SRC_BYTE_SIZE;

@@ -1,13 +1,15 @@
 package com.tcl.database;
 
-import android.content.Context;
+import java.util.ArrayList;
+import java.util.List;
 
+import android.content.Context;
+import android.util.Log;
+
+import com.tcl.bean.MessageUtils;
 import com.tcl.database.UserDao.Properties;
 import com.tcl.utils.LogExt;
 import com.tcl.wirelessdebug.TalkApplication;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import de.greenrobot.dao.async.AsyncOperation;
 import de.greenrobot.dao.async.AsyncOperationListener;
@@ -40,12 +42,12 @@ public class DatabaseManager {
     }
 
     public void startAsyncSession() {
-//        if (null == mAsyncSession) {
-//            LogExt.d(TAG,"startAsyncSession init");
-//            mAsyncSession = mDaoSession.startAsyncSession();
-//            mAsyncSession.setListener(mProxyListenerThread);
-//            mAsyncSession.setListenerMainThread(mProxyListenerMainThread);
-//        }
+        // if (null == mAsyncSession) {
+        // LogExt.d(TAG,"startAsyncSession init");
+        // mAsyncSession = mDaoSession.startAsyncSession();
+        // mAsyncSession.setListener(mProxyListenerThread);
+        // mAsyncSession.setListenerMainThread(mProxyListenerMainThread);
+        // }
     }
 
     public static DatabaseManager getInstance(Context c) {
@@ -182,7 +184,7 @@ public class DatabaseManager {
         return id;
     }
 
-    public List<User> queryAllUsers(){
+    public List<User> queryAllUsers() {
         Query<User> query = mUserDao.queryBuilder().build().forCurrentThread();
         return query.list();
     }
@@ -199,6 +201,32 @@ public class DatabaseManager {
             LogExt.e(TAG, "asynQueryAllUsers error:" + operation.getThrowable());
         }
         return lists;
+    }
+
+    public List<Msg> queryUserAllTalkMsg(User srcUser, User dstUser) {
+        Log.d(TAG, "queryUserAllTalkMsg srcUser is " + srcUser + " dstUser is " + dstUser);
+        Query<Msg> query = mMsgDao.queryBuilder()
+                .where(MsgDao.Properties._UserUID.eq(dstUser.get_UID()), MsgDao.Properties._SendType.eq(MessageUtils.TYPE_TALK_MSG)).build().forCurrentThread();
+        List<Msg> l = query.list();
+        for (Msg msg : l) {
+            Log.d(TAG, "queryUserAllMsg msg is " + msg);
+            if (msg.get_IsReceive() == Msg.MSG_SEND_TYPE_RECEIVE) {
+                msg.setSrcUser(dstUser);
+            } else {
+                msg.setSrcUser(srcUser);
+            }
+        }
+        return l;
+    }
+
+    public List<Msg> queryUserAllMsg(User user) {
+        Log.d(TAG, "queryUserAllMsg user is " + user);
+        Query<Msg> query = mMsgDao.queryBuilder().where(MsgDao.Properties._UserUID.eq(user.get_UID())).build().forCurrentThread();
+        List<Msg> l = query.list();
+        for (Msg msg : l) {
+            Log.d(TAG, "queryUserAllMsg msg is " + msg);
+        }
+        return l;
     }
 
     public LazyList<Msg> queryUserAllMsg(User user, String orderBy) {
