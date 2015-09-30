@@ -45,8 +45,7 @@ public class UserDao extends AbstractDao<User, String> {
         db.execSQL("CREATE TABLE " + constraint + "\"USER\" (" + //
                 "\"__NAME\" TEXT," + // 0: _Name
                 "\"__IP_ADDRESS\" TEXT," + // 1: _IpAddress
-                "\"__UID\" TEXT PRIMARY KEY NOT NULL ," + // 2: _UID
-                "\"__ON_OFFLINE\" INTEGER NOT NULL );"); // 3: _OnOffline
+                "\"__UID\" TEXT PRIMARY KEY NOT NULL );"); // 2: _UID
     }
 
     /** Drops the underlying database table. */

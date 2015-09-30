@@ -118,7 +118,7 @@ public class MsgExtraContent {
                 mByteBuffer = ByteBuffer.allocate(length);
                 mByteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET);
                 mByteBuffer.put(CaculateUtil.bigIntToByte(mReturnCRC8, MessageUtils.CRC8_BYTE_SIZE));
-                mByteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.TIME_BYTE_SIZE);
+                mByteBuffer.position(MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.CRC8_BYTE_SIZE);
                 mByteBuffer.put(CaculateUtil.long2Byte(msg.get_Timestamps()));
                 break;
             default:
@@ -137,7 +137,7 @@ public class MsgExtraContent {
                 if (tempLen >= MessageUtils.CRC8_BYTE_SIZE) {
                     mReturnCRC8 = CaculateUtil.bigBytesToInt(msgs, MessageUtils.BASE_TOTAL_BYTE_OFFSET);
                     if (tempLen - MessageUtils.CRC8_BYTE_SIZE >= MessageUtils.TIME_BYTE_SIZE) {
-                        mReturnTime = CaculateUtil.bytes2long(msgs, MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.TIME_BYTE_SIZE);
+                        mReturnTime = CaculateUtil.bytes2long(msgs, MessageUtils.BASE_TOTAL_BYTE_OFFSET + MessageUtils.CRC8_BYTE_SIZE);
                     }
                 } else {
                     ret = MessageUtils.PARSE_RESULT_DATA_NOT_ENOUGH;
