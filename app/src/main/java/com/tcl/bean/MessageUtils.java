@@ -1,6 +1,5 @@
 package com.tcl.bean;
 
-
 public class MessageUtils {
     private static final String TAG = "fuyao-MessageUtils";
 
